@@ -1,0 +1,85 @@
+services:
+  # Shared API Gateway
+  api-gateway:
+    build: .
+    container_name: forti-api-gateway
+    ports:
+      - "13001:13001" # Shared API
+      - "13000:13000" # Main Dashboard
+      - "3001:3001" # Babylon 3D
+    environment:
+      - NODE_ENV=production
+      - FORTIGATE_HOST=${FORTIGATE_HOST}
+      - FORTIGATE_USERNAME=${FORTIGATE_USERNAME}
+      - FORTIGATE_PASSWORD=${FORTIGATE_PASSWORD}
+      - VERIFY_SSL=${VERIFY_SSL:-false}
+      - SHARED_API_PORT=13001
+      - DASHBOARD_PORT=13000
+      - BABYLON_3D_PORT=3001
+      - PYTHON_API_PORT=13002
+      - CACHE_TTL=300000
+      - MAX_SWITCHES=${MAX_SWITCHES:-50}
+      - MAX_ACCESS_POINTS=${MAX_ACCESS_POINTS:-100}
+      - MAX_ENDPOINTS=${MAX_ENDPOINTS:-500}
+    volumes:
+      - ./shared/.env:/app/shared/.env:ro
+      - ./logs:/app/logs
+      - ./cache:/app/cache
+      - ./babylon_3d/babylon_app/network-visualizer/assets/models:/app/babylon_3d/babylon_app/network-visualizer/assets/models:ro
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:13001/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - forti-network
+
+  # Redis Cache (Optional - for better performance)
+  redis:
+    image: redis:7-alpine
+    container_name: forti-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - forti-network
+
+  # Nginx Reverse Proxy (Optional - for production)
+  nginx:
+    image: nginx:alpine
+    container_name: forti-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./logs/nginx:/var/log/nginx
+    depends_on:
+      - api-gateway
+    restart: unless-stopped
+    networks:
+      - forti-network
+    profiles:
+      - production
+
+volumes:
+  redis_data:
+    driver: local
+
+networks:
+  forti-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

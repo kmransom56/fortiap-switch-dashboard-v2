@@ -1,0 +1,341 @@
+{
+  "_timestamp": 1765223075284,
+  "data": [
+    {
+      "name": "SW",
+      "serial": "S124EPTQ22000276",
+      "model": "FortiSwitch",
+      "ip_address": "SW",
+      "firmware_version": "Unknown",
+      "status": "up",
+      "ports_total": 29,
+      "ports_up": 10,
+      "poe_power_consumption": 0,
+      "poe_power_budget": 0,
+      "poe_power_percentage": 0,
+      "temperature": 0,
+      "fan_status": "ok",
+      "ports": [
+        {
+          "port": "port1",
+          "status": "up",
+          "rx-bytes": 2908648227,
+          "tx-bytes": 21291163732,
+          "rx-packets": 7652975,
+          "tx-packets": 18190878,
+          "poe_power": 0,
+          "poe_max": 0,
+          "poe_capable": false
+        },
+        {
+          "port": "port2",
+          "status": "up",
+          "rx-bytes": 204122643,
+          "tx-bytes": 8486005927,
+          "rx-packets": 728451,
+          "tx-packets": 8009373,
+          "poe_power": 0,
+          "poe_max": 0,
+          "poe_capable": false
+        },
+        {
+          "port": "port3",
+          "status": "down",
+          "rx-bytes": 0,
+          "tx-bytes": 0,
+          "rx-packets": 0,
+          "tx-packets": 0,
+          "poe_power": 0,
+          "poe_max": 0,
+          "poe_capable": false
+        },
+        {
+          "port": "port4",
+          "status": "down",
+          "rx-bytes": 0,
+          "tx-bytes": 0,
+          "rx-packets": 0,
+          "tx-packets": 0,
+          "poe_power": 0,
+          "poe_max": 0,
+          "poe_capable": false
+        },
+        {
+          "port": "port5",
+          "status": "up",
+          "rx-bytes": 129872365,
+          "tx-bytes": 6297448865,
+          "rx-packets": 643764,
+          "tx-packets": 6843267,
+          "poe_power": 0,
+          "poe_max": 0,
+          "poe_capable": false
+        },
+        {
+          "port": "port6",
+          "status": "up",
+          "rx-bytes": 4161912208,
+          "tx-bytes": 14121629660,
+          "rx-packets": 6299466,
+          "tx-packets": 15150587,
+          "poe_power": 0,
+          "poe_max": 0,
+          "poe_capable": false
+        },
+        {
+          "port": "port7",
+          "status": "down",
+          "rx-bytes": 0,
+          "tx-bytes": 0,
+          "rx-packets": 0,
+          "tx-packets": 0,
+          "poe_power": 0,
+          "poe_max": 0,
+          "poe_capable": false
+        },
+        {
+          "port": "port8",
+          "status": "up",
+          "rx-bytes": 5940799478,
+          "tx-bytes": 95400036,
+          "rx-packets": 5659267,
+          "tx-packets": 230390,
+          "poe_power": 0,
+          "poe_max": 0,
+          "poe_capable": false
+        },
+        {
+          "port": "port9",
+          "status": "down",
+          "rx-bytes": 0,
+          "tx-bytes": 0,
+          "rx-packets": 0,
+          "tx-packets": 0,
+          "poe_power": 0,
+          "poe_max": 0,
+          "poe_capable": false
+        },
+        {
+          "port": "port10",
+          "status": "up",
+          "rx-bytes": 266078,
+          "tx-bytes": 333104408,
+          "rx-packets": 1312,
+          "tx-packets": 317955,
+          "poe_power": 0,
+          "poe_max": 0,
+          "poe_capable": false
+        },
+        {
+          "port": "port11",
+          "status": "down",
+          "rx-bytes": 0,
+          "tx-bytes": 0,
+          "rx-packets": 0,
+          "tx-packets": 0,
+          "poe_power": 0,
+          "poe_max": 0,
+          "poe_capable": false
+        },
+        {
+          "port": "port12",
+          "status": "down",
+          "rx-bytes": 0,
+          "tx-bytes": 0,
+          "rx-packets": 0,
+          "tx-packets": 0,
+          "poe_power": 0,
+          "poe_max": 0,
+          "poe_capable": false
+        },
+        {
+          "port": "port13",
+          "status": "down",
+          "rx-bytes": 0,
+          "tx-bytes": 0,
+          "rx-packets": 0,
+          "tx-packets": 0,
+          "poe_power": 0,
+          "poe_max": 0,
+          "poe_capable": false
+        },
+        {
+          "port": "port14",
+          "status": "down",
+          "rx-bytes": 0,
+          "tx-bytes": 0,
+          "rx-packets": 0,
+          "tx-packets": 0,
+          "poe_power": 0,
+          "poe_max": 0,
+          "poe_capable": false
+        },
+        {
+          "port": "port15",
+          "status": "down",
+          "rx-bytes": 0,
+          "tx-bytes": 0,
+          "rx-packets": 0,
+          "tx-packets": 0,
+          "poe_power": 0,
+          "poe_max": 0,
+          "poe_capable": false
+        },
+        {
+          "port": "port16",
+          "status": "down",
+          "rx-bytes": 0,
+          "tx-bytes": 0,
+          "rx-packets": 0,
+          "tx-packets": 0,
+          "poe_power": 0,
+          "poe_max": 0,
+          "poe_capable": false
+        },
+        {
+          "port": "port17",
+          "status": "down",
+          "rx-bytes": 0,
+          "tx-bytes": 0,
+          "rx-packets": 0,
+          "tx-packets": 0,
+          "poe_power": 0,
+          "poe_max": 0,
+          "poe_capable": false
+        },
+        {
+          "port": "port18",
+          "status": "down",
+          "rx-bytes": 0,
+          "tx-bytes": 0,
+          "rx-packets": 0,
+          "tx-packets": 0,
+          "poe_power": 0,
+          "poe_max": 0,
+          "poe_capable": false
+        },
+        {
+          "port": "port19",
+          "status": "down",
+          "rx-bytes": 0,
+          "tx-bytes": 0,
+          "rx-packets": 0,
+          "tx-packets": 0,
+          "poe_power": 0,
+          "poe_max": 0,
+          "poe_capable": false
+        },
+        {
+          "port": "port20",
+          "status": "down",
+          "rx-bytes": 0,
+          "tx-bytes": 0,
+          "rx-packets": 0,
+          "tx-packets": 0,
+          "poe_power": 0,
+          "poe_max": 0,
+          "poe_capable": false
+        },
+        {
+          "port": "port21",
+          "status": "up",
+          "rx-bytes": 209082734,
+          "tx-bytes": 6157655403,
+          "rx-packets": 1082247,
+          "tx-packets": 6892044,
+          "poe_power": 0,
+          "poe_max": 0,
+          "poe_capable": false
+        },
+        {
+          "port": "port22",
+          "status": "down",
+          "rx-bytes": 0,
+          "tx-bytes": 0,
+          "rx-packets": 0,
+          "tx-packets": 0,
+          "poe_power": 0,
+          "poe_max": 0,
+          "poe_capable": false
+        },
+        {
+          "port": "port23",
+          "status": "up",
+          "rx-bytes": 27207032126,
+          "tx-bytes": 13767758261,
+          "rx-packets": 25724690,
+          "tx-packets": 22418985,
+          "poe_power": 0,
+          "poe_max": 0,
+          "poe_capable": false
+        },
+        {
+          "port": "port24",
+          "status": "up",
+          "rx-bytes": 311741942,
+          "tx-bytes": 6493999521,
+          "rx-packets": 1843730,
+          "tx-packets": 7895821,
+          "poe_power": 0,
+          "poe_max": 0,
+          "poe_capable": false
+        },
+        {
+          "port": "port25",
+          "status": "down",
+          "rx-bytes": 0,
+          "tx-bytes": 0,
+          "rx-packets": 0,
+          "tx-packets": 0,
+          "poe_power": 0,
+          "poe_max": 0,
+          "poe_capable": false
+        },
+        {
+          "port": "port26",
+          "status": "down",
+          "rx-bytes": 0,
+          "tx-bytes": 0,
+          "rx-packets": 0,
+          "tx-packets": 0,
+          "poe_power": 0,
+          "poe_max": 0,
+          "poe_capable": false
+        },
+        {
+          "port": "port27",
+          "status": "down",
+          "rx-bytes": 0,
+          "tx-bytes": 0,
+          "rx-packets": 0,
+          "tx-packets": 0,
+          "poe_power": 0,
+          "poe_max": 0,
+          "poe_capable": false
+        },
+        {
+          "port": "port28",
+          "status": "down",
+          "rx-bytes": 0,
+          "tx-bytes": 0,
+          "rx-packets": 0,
+          "tx-packets": 0,
+          "poe_power": 0,
+          "poe_max": 0,
+          "poe_capable": false
+        },
+        {
+          "port": "internal",
+          "status": "up",
+          "rx-bytes": 1010609143,
+          "tx-bytes": 53753766,
+          "rx-packets": 2420997,
+          "tx-packets": 339101,
+          "poe_power": 0,
+          "poe_max": 0,
+          "poe_capable": false
+        }
+      ]
+    }
+  ]
+}

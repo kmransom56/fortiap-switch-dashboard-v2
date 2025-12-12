@@ -1,0 +1,5 @@
+"Name","Type","IP Address","Model","Serial","Status","Firmware"
+"FW","FortiGate","192.168.0.254","FortiGate","Unknown","up","Unknown"
+"SW","FortiSwitch","SW","FortiSwitch","S124EPTQ22000276","up","Unknown"
+"AP","FortiAP","192.168.1.4","FP231F","FP231FTF20023043","up","FP231F-v7.6.3-build1032"
+"AP2","FortiAP","192.168.1.3","FP231F","FP231FTF22003593","up","FP231F-v7.6.3-build1032"

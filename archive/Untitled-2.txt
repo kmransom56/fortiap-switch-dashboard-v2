@@ -1,0 +1,2 @@
+curl -X 'GET' 'https://fw.netintegrate.net:10443/api/v2/monitor/switch-controller/managed-switch/status?access_token=Authorization: Bearer FG_API_KEY=199psNw33b8bq581dNmQqNpkGH53bm' -H 'accept: application/json'
+curl -k -H "Authorization: Bearer 199psNw33b8bq581dNmQqNpkGH53bm" "https://fw.netintegrate.net:10443/api/v2/monitor/switch-controller/managed-switch/port-stats"

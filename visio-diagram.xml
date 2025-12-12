@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<VisioDocument xmlns="http://schemas.microsoft.com/visio/2003/core">
+  <DocumentProperties>
+    <Title>FortiGate Network Topology</Title>
+    <Creator>FortiGate Dashboard</Creator>
+    <Subject>Network Infrastructure Diagram</Subject>
+  </DocumentProperties>
+  <Pages>
+    <Page ID="0" Name="Network Topology">
+      <PageSheet>
+        <PageProps>
+          <PageWidth>11</PageWidth>
+          <PageHeight>8.5</PageHeight>
+        </PageProps>
+      </PageSheet>
+      <Shapes>
+
+        <Shape ID="1" Type="Shape" Name="FW">
+          <XForm>
+            <PinX>5.5</PinX>
+            <PinY>8</PinY>
+            <Width>1.5</Width>
+            <Height>1</Height>
+          </XForm>
+          <Text>FW
+192.168.0.254</Text>
+        </Shape>
+
+        <Shape ID="2" Type="Shape" Name="SW">
+          <XForm>
+            <PinX>2</PinX>
+            <PinY>6</PinY>
+            <Width>1.5</Width>
+            <Height>1</Height>
+          </XForm>
+          <Text>SW
+undefined</Text>
+        </Shape>
+
+        <Shape ID="3" Type="Shape" Name="AP">
+          <XForm>
+            <PinX>2</PinX>
+            <PinY>4</PinY>
+            <Width>1</Width>
+            <Height>1</Height>
+          </XForm>
+          <Text>AP
+undefined</Text>
+        </Shape>
+
+        <Shape ID="4" Type="Shape" Name="AP2">
+          <XForm>
+            <PinX>4</PinX>
+            <PinY>4</PinY>
+            <Width>1</Width>
+            <Height>1</Height>
+          </XForm>
+          <Text>AP2
+undefined</Text>
+        </Shape>
+
+      </Shapes>
+    </Page>
+  </Pages>
+</VisioDocument>

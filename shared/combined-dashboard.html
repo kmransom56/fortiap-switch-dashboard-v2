@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FortiAP/Switch Dashboard - Combined Visualization</title>
+    
+    <!-- Chart.js for 2D charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Babylon.js for 3D visualization -->
+    <script src="https://cdn.babylonjs.com/babylon.js"></script>
+    <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+    
+    <!-- Combined Dashboard CSS -->
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: #ffffff;
+            overflow-x: hidden;
+        }
+
+        /* Header */
+        .header {
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            background: linear-gradient(45deg, #00d4ff, #0099ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header-controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .view-switcher, .viz-switcher {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .view-switcher:hover, .viz-switcher:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .view-switcher.active, .viz-switcher.active {
+            background: linear-gradient(45deg, #00d4ff, #0099ff);
+            border-color: #00d4ff;
+        }
+
+        /* Data Source Indicator */
+        .data-source-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+
+        .data-source.live {
+            background: rgba(76, 175, 80, 0.2);
+            border: 1px solid #4CAF50;
+        }
+
+        .data-source.cached {
+            background: rgba(255, 152, 0, 0.2);
+            border: 1px solid #FF9800;
+        }
+
+        .data-source.fallback {
+            background: rgba(244, 67, 54, 0.2);
+            border: 1px solid #F44336;
+        }
+
+        .data-source-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Main Dashboard Container */
+        .main-dashboard {
+            display: flex;
+            height: calc(100vh - 70px);
+            position: relative;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 300px;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem;
+            overflow-y: auto;
+        }
+
+        .sidebar-section {
+            margin-bottom: 2rem;
+        }
+
+        .sidebar-title {
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            color: #00d4ff;
+        }
+
+        .device-filter {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .device-filter input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: #00d4ff;
+        }
+
+        /* Dashboard Views */
+        .dashboard-view {
+            flex: 1;
+            display: none;
+            padding: 2rem;
+            overflow-y: auto;
+        }
+
+        .dashboard-view.active {
+            display: block;
+        }
+
+        /* Overview View */
+        .overview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            background: linear-gradient(45deg, #00d4ff, #0099ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .stat-label {
+            color: rgba(255, 255, 255, 0.7);
+            margin-top: 0.5rem;
+        }
+
+        /* Charts Container */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 2rem;
+        }
+
+        .chart-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 1.5rem;
+        }
+
+        .chart-title {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            color: #00d4ff;
+        }
+
+        .chart-canvas {
+            height: 300px;
+        }
+
+        /* 3D Topology View */
+        #3d-topology-view {
+            padding: 0;
+        }
+
+        .babylon-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        #babylon-canvas {
+            width: 100%;
+            height: 100%;
+            outline: none;
+        }
+
+        /* Hierarchy View */
+        .hierarchy-container {
+            display: flex;
+            height: calc(100vh - 200px);
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .hierarchy-tree {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 20px;
+            overflow-y: auto;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .hierarchy-details {
+            width: 300px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .hierarchy-node {
+            margin-bottom: 2px;
+        }
+
+        .node-content {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            gap: 8px;
+        }
+
+        .node-content:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .node-toggle {
+            width: 16px;
+            height: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            font-size: 12px;
+        }
+
+        .node-empty {
+            width: 16px;
+            height: 16px;
+        }
+
+        .node-icon {
+            width: 16px;
+            height: 16px;
+            border-radius: 2px;
+            display: inline-block;
+        }
+
+        .node-icon-root { background: #666; }
+        .node-icon-fortigate { background: #ff6b6b; }
+        .node-icon-switch { background: #4ecdc4; }
+        .node-icon-access_point { background: #45b7d1; }
+        .node-icon-port { background: #96ceb4; }
+        .node-icon-client-group { background: #ffeaa7; }
+        .node-icon-switch-container { background: #74b9ff; }
+        .node-icon-ap-container { background: #a29bfe; }
+
+        .node-name {
+            flex: 1;
+            font-weight: 500;
+        }
+
+        .node-status {
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-up {
+            background: rgba(76, 175, 80, 0.2);
+            color: #4caf50;
+            border: 1px solid rgba(76, 175, 80, 0.3);
+        }
+
+        .status-down {
+            background: rgba(244, 67, 54, 0.2);
+            color: #f44336;
+            border: 1px solid rgba(244, 67, 54, 0.3);
+        }
+
+        .status-warning {
+            background: rgba(255, 193, 7, 0.2);
+            color: #ffc107;
+            border: 1px solid rgba(255, 193, 7, 0.3);
+        }
+
+        .node-ip, .node-model {
+            font-size: 11px;
+            opacity: 0.7;
+            margin-left: 8px;
+        }
+
+        .node-children {
+            margin-left: 20px;
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            padding-left: 0;
+        }
+
+        .device-info {
+            margin-bottom: 15px;
+        }
+
+        .device-info p {
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .device-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .error-message {
+            text-align: center;
+            padding: 40px;
+            color: #ff6b6b;
+        }
+
+        .babylon-controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .babylon-btn {
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .babylon-btn:hover {
+            background: rgba(0, 212, 255, 0.3);
+            border-color: #00d4ff;
+        }
+
+        /* Hybrid View */
+        #hybrid-container {
+            display: flex;
+            height: 100%;
+            gap: 1rem;
+        }
+
+        .hybrid-panel {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 1rem;
+        }
+
+        /* Advanced View */
+        .advanced-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            height: 100%;
+        }
+
+        .advanced-panel {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 1.5rem;
+            overflow-y: auto;
+        }
+
+        /* Controls Panel */
+        .controls-panel {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 1rem;
+            display: flex;
+            gap: 1rem;
+            z-index: 1000;
+        }
+
+        .control-btn {
+            background: linear-gradient(45deg, #00d4ff, #0099ff);
+            border: none;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .control-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 212, 255, 0.3);
+        }
+
+        .control-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Loading Overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top: 3px solid #00d4ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Device Info Panel */
+        .device-info-panel {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 2rem;
+            min-width: 400px;
+            display: none;
+            z-index: 1500;
+        }
+
+        .device-info-panel h3 {
+            color: #00d4ff;
+            margin-bottom: 1rem;
+        }
+
+        .status-up { color: #4CAF50; }
+        .status-down { color: #F44336; }
+        .status-warning { color: #FF9800; }
+
+        /* Welcome Screen */
+        .welcome-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 3000;
+        }
+
+        .welcome-content {
+            text-align: center;
+        }
+
+        .welcome-content h1 {
+            font-size: 3rem;
+            background: linear-gradient(45deg, #00d4ff, #0099ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1rem;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .sidebar {
+                display: none;
+            }
+            
+            .overview-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .advanced-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .controls-panel {
+                flex-direction: column;
+                bottom: 10px;
+                right: 10px;
+            }
+        }
+
+        /* Layout Variations */
+        .layout-grid .dashboard-view {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 2rem;
+        }
+
+        .layout-split .main-dashboard {
+            flex-direction: row;
+        }
+
+        .layout-focus .dashboard-view {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="logo">🌐 FortiAP/Switch Dashboard</div>
+        <div class="header-controls">
+            <!-- View Switcher -->
+            <div class="view-switchers">
+                <button class="view-switcher active" data-view="overview">Overview</button>
+                <button class="view-switcher" data-view="3d-topology">3D Topology</button>
+                <button class="view-switcher" data-view="hierarchy">Hierarchy</button>
+                <button class="view-switcher" data-view="hybrid">Hybrid</button>
+                <button class="view-switcher" data-view="advanced">Advanced</button>
+            </div>
+            
+            <!-- Visualization Switcher -->
+            <div class="viz-switchers">
+                <button class="viz-switcher active" data-viz="2d-charts">2D Charts</button>
+                <button class="viz-switcher" data-viz="3d-topology">3D Topology</button>
+                <button class="viz-switcher" data-viz="hierarchy">Hierarchy</button>
+                <button class="viz-switcher" data-viz="hybrid">Hybrid</button>
+                <button class="viz-switcher" data-viz="advanced">Advanced</button>
+            </div>
+            
+            <!-- Data Source Indicator -->
+            <div class="data-source-indicator live">
+                <div class="data-source-dot"></div>
+                <span id="data-source-text">Live Data</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Dashboard -->
+    <main class="main-dashboard">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <!-- Filters -->
+            <div class="sidebar-section">
+                <h3 class="sidebar-title">Device Filters</h3>
+                <div class="device-filter">
+                    <input type="checkbox" id="filter-firewall" checked>
+                    <label for="filter-firewall">Firewall</label>
+                </div>
+                <div class="device-filter">
+                    <input type="checkbox" id="filter-switches" checked>
+                    <label for="filter-switches">Switches</label>
+                </div>
+                <div class="device-filter">
+                    <input type="checkbox" id="filter-aps" checked>
+                    <label for="filter-aps">Access Points</label>
+                </div>
+                <div class="device-filter">
+                    <input type="checkbox" id="filter-endpoints" checked>
+                    <label for="filter-endpoints">Endpoints</label>
+                </div>
+                <div class="device-filter">
+                    <input type="checkbox" id="filter-offline">
+                    <label for="filter-offline">Show Offline</label>
+                </div>
+            </div>
+
+            <!-- Discovery Settings -->
+            <div class="sidebar-section">
+                <h3 class="sidebar-title">Discovery Settings</h3>
+                <div class="setting-item">
+                    <label for="max-switches">Max Switches:</label>
+                    <input type="number" id="max-switches" value="50" min="1" max="200">
+                </div>
+                <div class="setting-item">
+                    <label for="max-aps">Max Access Points:</label>
+                    <input type="number" id="max-aps" value="100" min="1" max="500">
+                </div>
+                <div class="setting-item">
+                    <label for="max-endpoints">Max Endpoints:</label>
+                    <input type="number" id="max-endpoints" value="500" min="1" max="2000">
+                </div>
+                <div class="setting-item">
+                    <label for="discovery-timeout">Timeout (sec):</label>
+                    <input type="number" id="discovery-timeout" value="30" min="10" max="120">
+                </div>
+                <button id="run-discovery" class="control-btn">Run Discovery</button>
+            </div>
+
+            <!-- Performance Stats -->
+            <div class="sidebar-section">
+                <h3 class="sidebar-title">Performance</h3>
+                <div class="stat-item">
+                    <span>Uptime:</span>
+                    <span id="uptime">0s</span>
+                </div>
+                <div class="stat-item">
+                    <span>API Calls:</span>
+                    <span id="api-calls">0</span>
+                </div>
+                <div class="stat-item">
+                    <span>Avg Response:</span>
+                    <span id="avg-response-time">0ms</span>
+                </div>
+                <div class="stat-item">
+                    <span>Error Rate:</span>
+                    <span id="error-rate">0%</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Overview View -->
+        <div id="overview-view" class="dashboard-view active">
+            <div class="overview-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="total-devices">0</div>
+                    <div class="stat-label">Total Devices</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="online-devices">0</div>
+                    <div class="stat-label">Online Devices</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="offline-devices">0</div>
+                    <div class="stat-label">Offline Devices</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="last-refresh">--:--:--</div>
+                    <div class="stat-label">Last Refresh</div>
+                </div>
+            </div>
+
+            <div class="charts-grid">
+                <div class="chart-container">
+                    <h3 class="chart-title">Device Status</h3>
+                    <div class="chart-canvas">
+                        <canvas id="device-status-chart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <h3 class="chart-title">Performance Metrics</h3>
+                    <div class="chart-canvas">
+                        <canvas id="performance-chart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <h3 class="chart-title">Network Traffic</h3>
+                    <div class="chart-canvas">
+                        <canvas id="traffic-chart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <h3 class="chart-title">Historical Trends</h3>
+                    <div class="chart-canvas">
+                        <canvas id="historical-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3D Topology View -->
+        <div id="3d-topology-view" class="dashboard-view">
+            <div class="babylon-container">
+                <canvas id="babylon-canvas"></canvas>
+                <div class="babylon-controls">
+                    <button class="babylon-btn" id="reset-3d">Reset View</button>
+                    <button class="babylon-btn" id="fullscreen-3d">Fullscreen</button>
+                    <button class="babylon-btn" id="screenshot-3d">Screenshot</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hybrid View -->
+        <div id="hybrid-view" class="dashboard-view">
+            <div id="hybrid-container">
+                <div class="hybrid-panel">
+                    <h3>2D Charts</h3>
+                    <div class="chart-canvas">
+                        <canvas id="hybrid-chart-1"></canvas>
+                    </div>
+                </div>
+                <div class="hybrid-panel">
+                    <h3>3D Topology</h3>
+                    <canvas id="hybrid-babylon-canvas"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Advanced View -->
+        <div id="advanced-view" class="dashboard-view">
+            <div class="advanced-grid">
+                <div class="advanced-panel">
+                    <h3>Analytics</h3>
+                    <div id="analytics-panel">
+                        <p>Advanced analytics will be displayed here...</p>
+                    </div>
+                </div>
+                <div class="advanced-panel">
+                    <h3>VSS Conversion</h3>
+                    <div>
+                        <input type="file" id="vss-file-input" accept=".vss">
+                        <button id="convert-vss" class="control-btn">Convert VSS</button>
+                        <div id="vss-result" style="display: none;"></div>
+                    </div>
+                </div>
+                <div class="advanced-panel">
+                    <h3>Discovery Progress</h3>
+                    <div id="discovery-progress" style="display: none;"></div>
+                </div>
+                <div class="advanced-panel">
+                    <h3>System Logs</h3>
+                    <div id="system-logs">
+                        <p>System logs will appear here...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Controls Panel -->
+    <div class="controls-panel">
+        <button id="refresh-data" class="control-btn">🔄 Refresh Data</button>
+        <button id="toggle-live" class="control-btn">🔴 Start Live</button>
+        <button id="export-data" class="control-btn">📊 Export Data</button>
+        <button id="layout-grid" class="control-btn">⊞ Grid</button>
+        <button id="layout-split" class="control-btn">⊟ Split</button>
+        <button id="layout-focus" class="control-btn">⊡ Focus</button>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- Device Info Panel -->
+    <div class="device-info-panel" id="device-info-panel">
+        <h3>Device Information</h3>
+        <div id="device-info-content">
+            <!-- Device info will be populated here -->
+        </div>
+        <button onclick="document.getElementById('device-info-panel').style.display='none'">Close</button>
+    </div>
+
+    <!-- Welcome Screen -->
+    <div class="welcome-screen" id="welcome-screen">
+        <div class="welcome-content">
+            <h1>🌐 FortiAP/Switch Dashboard</h1>
+            <p>Combined Visualization Platform</p>
+            <p>Loading your network...</p>
+        </div>
+    </div>
+
+    <!-- Error Panels -->
+    <div id="3d-error" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(244, 67, 54, 0.9); padding: 2rem; border-radius: 12px; z-index: 2000;"></div>
+    <div id="data-error" style="display: none; position: fixed; top: 20px; right: 20px; background: rgba(244, 67, 54, 0.9); padding: 1rem; border-radius: 8px; z-index: 2000;"></div>
+
+    <!-- Combined Dashboard JavaScript -->
+    <script src="shared/combined-dashboard.js"></script>
+</body>
+</html>

@@ -1,0 +1,91 @@
+curl (Linux/macOS/WSL)
+curl does NOT follow redirects by default, so you usually already see the real FortiGate response. If you had been using -L, just remove it:​
+
+With redirects:
+
+curl -k -L https://<FGT>/api/v2/...
+
+Without redirects (show 3xx + Location header or HTML login):
+
+curl -k -v https://<FGT>/api/v2/...
+
+The -v is useful to see status code and headers; if you get 302 and Location: /login, you know FortiGate rejected your auth and redirected to GUI login.​
+
+Python requests
+By default, requests follows redirects; disable that with allow_redirects=False so you can see 301/302 + Location and the HTML body.​
+
+python
+import requests
+
+url = "https://<FGT_IP>/api/v2/monitor/switch-controller/managed-switch/select/"
+headers = {
+    "Authorization": "Bearer YOUR_API_TOKEN",
+    "Accept": "application/json",
+}
+
+resp = requests.get(url, headers=headers, verify=False, allow_redirects=False)
+print("Status:", resp.status_code)
+print("Location:", resp.headers.get("Location"))
+print("Content-Type:", resp.headers.get("Content-Type"))
+print(resp.text[:500])  # first part of body
+If you see:
+
+200 + text/html + login form → FortiGate treated it as GUI access.
+
+302 + Location: /login → FortiGate is redirecting you to the login page.
+
+PowerShell Invoke-WebRequest
+Use -MaximumRedirection 0 to get the initial response instead of silently following redirects.​
+
+powershell
+$uri = "https://<FGT_IP>/api/v2/monitor/switch-controller/managed-switch/select/"
+
+$response = Invoke-WebRequest `
+    -Uri $uri `
+    -Headers @{ "Authorization" = "Bearer YOUR_API_TOKEN"; "Accept" = "application/json" } `
+    -Method GET `
+    -MaximumRedirection 0 `
+    -SkipCertificateCheck
+
+$response.StatusCode
+$response.Headers["Location"]
+$response.Content.Substring(0,500)
+A 3xx here with Location /login confirms FortiGate is redirecting you because the auth method (or token) is not accepted.​
+
+What to look for in the response
+Status 302/301 + Location /login or /remote/login → redirect to GUI login (auth failed or not API-style).​
+
+Status 200 + text/html + HTML content → you hit the GUI or got the login page without redirect.​
+
+Status 200 + application/json → API auth is working; you’re seeing the real REST response.​
+
+Self-Documenting API Schema (Best Method for MCP Integration)
+FortiOS 7.0+ includes built-in API schema endpoints that return complete JSON documentation directly from your FortiGate. This is ideal for your MCP servers because you can programmatically extract the exact API structure for your firmware version:​​
+
+Retrieve Full CMDB Schema
+bash
+curl -k \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  "https://<FGT_IP>/api/v2/cmdb/?action=schema"
+Retrieve Schema for Specific Endpoint
+bash
+# Firewall policy schema
+curl -k \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  "https://<FGT_IP>/api/v2/cmdb/firewall/policy/?action=schema"
+
+# Switch-controller managed-switch schema
+curl -k \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  "https://<FGT_IP>/api/v2/cmdb/switch-controller/managed-switch/?action=schema"
+
+# Wireless-controller wtp (FortiAP) schema
+curl -k \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  "https://<FGT_IP>/api/v2/cmdb/wireless-controller/wtp/?action=schema"
+Retrieve Monitor API Endpoints
+bash
+# Full monitor API directory
+curl -k \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  "https://<FGT_IP>/api/v2/monitor/"

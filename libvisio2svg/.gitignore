@@ -1,0 +1,38 @@
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+*.so.*
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# cMake files
+CMakeCache.txt
+CMakeFiles
+Makefile
+cmake_install.cmake
+install_manifest.txt
+
+# compiled exe
+vss2svg-conv
+vsd2svg-conv
+
+# out directory
+out
+tests/deps_build/
+tests/usr/

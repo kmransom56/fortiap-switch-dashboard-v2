@@ -1,0 +1,2 @@
+https://sadrithmina.de/posts/2024/02/pyfg-compare-fortigate-configurations/
+https://sadrithmina.de/posts/2024/05/alternative-fortigate-authentication-api/

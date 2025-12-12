@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Network Topology Visualization</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.26.0/cytoscape.min.js"></script>
+  <style>
+    body { 
+      font-family: Arial, sans-serif; 
+      margin: 0; 
+      padding: 0; 
+      background: #f5f5f5;
+    }
+    #cy { 
+      width: 100vw; 
+      height: 95vh; 
+      display: block; 
+      background: #ffffff;
+    }
+    #toolbar { 
+      padding: 15px; 
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .toolbar-section {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .btn { 
+      padding: 8px 16px;
+      background: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 500;
+      color: #667eea;
+      transition: all 0.3s;
+    }
+    .btn:hover {
+      background: #f0f0f0;
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    .toolbar-title {
+      color: white;
+      font-size: 18px;
+      font-weight: bold;
+    }
+    #legend {
+      position: absolute;
+      top: 70px;
+      right: 20px;
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      max-width: 200px;
+      z-index: 1000;
+    }
+    #legend h4 {
+      margin: 0 0 10px 0;
+      font-size: 14px;
+      color: #333;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      margin: 8px 0;
+      font-size: 12px;
+    }
+    .legend-icon {
+      width: 24px;
+      height: 24px;
+      margin-right: 8px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #status-indicator {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      background: white;
+      padding: 10px 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      font-size: 12px;
+      color: #666;
+      z-index: 1000;
+    }
+    #error-message {
+      position: absolute;
+      top: 70px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #ff5252;
+      color: white;
+      padding: 15px 25px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      display: none;
+      z-index: 1001;
+    }
+    #loading {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      color: #666;
+      z-index: 1000;
+    }
+    .spinner {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #667eea;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 10px;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div id="toolbar">
+    <div class="toolbar-section">
+      <span class="toolbar-title">🌐 Network Topology</span>
+    </div>
+    <div class="toolbar-section">
+      <button class="btn" onclick="resetLayout()">🔄 Reset Layout</button>
+      <button class="btn" onclick="fitToScreen()">📏 Fit to Screen</button>
+      <button class="btn" onclick="exportTopology('json')">💾 Export JSON</button>
+      <button class="btn" onclick="reloadData()">🔃 Reload Data</button>
+    </div>
+  </div>
+
+  <div id="error-message"></div>
+
+  <div id="loading">
+    <div class="spinner"></div>
+    <div>Loading network topology...</div>
+  </div>
+
+  <div id="legend">
+    <h4>Device Types</h4>
+    <div class="legend-item">
+      <div class="legend-icon" style="background: #00A9E0;">🔒</div>
+      <span>FortiGate</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-icon" style="background: #7CB342;">🔀</div>
+      <span>FortiSwitch</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-icon" style="background: #FFA726;">📡</div>
+      <span>FortiAP</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-icon" style="background: #9C27B0;">📱</div>
+      <span>WiFi Client</span>
+    </div>
+  </div>
+
+  <div id="status-indicator">
+    <span id="device-count">Loading...</span>
+  </div>
+
+  <div id="cy"></div>
+
+  <script>
+    let cy = null;
+
+    // Icon mapping for different device types (update these paths to your actual icons)
+    const iconMap = {
+      'FortiGate': 'drawio/fortinet_icons/fortigate.svg',
+      'FortiSwitch': 'drawio/fortinet_icons/fortiswitch.svg',
+      'FortiAP': 'drawio/fortinet_icons/fortiap.svg',
+      'WiFiClient': 'drawio/fortinet_icons/wifi-client.svg',
+      'SwitchDevice': 'drawio/fortinet_icons/switch.svg'
+    };
+
+    // Sample data for testing (replace with API data when available)
+    const sampleData = {
+      nodes: [
+        { id: 'fg1', label: 'FortiGate-Main', type: 'FortiGate', ip: '192.168.1.1', status: 'online' },
+        { id: 'fs1', label: 'Switch-Core-01', type: 'FortiSwitch', ip: '192.168.1.10', status: 'online' },
+        { id: 'fs2', label: 'Switch-Access-01', type: 'FortiSwitch', ip: '192.168.1.11', status: 'online' },
+        { id: 'fs3', label: 'Switch-Access-02', type: 'FortiSwitch', ip: '192.168.1.12', status: 'online' },
+        { id: 'ap1', label: 'AP-Office-Floor1', type: 'FortiAP', ip: '192.168.1.20', status: 'online' },
+        { id: 'ap2', label: 'AP-Office-Floor2', type: 'FortiAP', ip: '192.168.1.21', status: 'online' },
+        { id: 'ap3', label: 'AP-Warehouse', type: 'FortiAP', ip: '192.168.1.22', status: 'online' }
+      ],
+      edges: [
+        { source: 'fg1', target: 'fs1', type: 'fortilink', bandwidth: '10G' },
+        { source: 'fs1', target: 'fs2', type: 'ethernet', bandwidth: '1G' },
+        { source: 'fs1', target: 'fs3', type: 'ethernet', bandwidth: '1G' },
+        { source: 'fg1', target: 'ap1', type: 'capwap' },
+        { source: 'fg1', target: 'ap2', type: 'capwap' },
+        { source: 'fg1', target: 'ap3', type: 'capwap' }
+      ]
+    };
+
+    function showError(message) {
+      const errorDiv = document.getElementById('error-message');
+      errorDiv.textContent = message;
+      errorDiv.style.display = 'block';
+      setTimeout(() => {
+        errorDiv.style.display = 'none';
+      }, 5000);
+    }
+
+    function hideLoading() {
+      document.getElementById('loading').style.display = 'none';
+    }
+
+    function getColor(type, status) {
+      if (status === 'down' || status === 'offline') {
+        return '#ff4444';
+      }
+      
+      switch(type) {
+        case 'FortiGate': return '#00A9E0';
+        case 'FortiAP': return '#FFA726';
+        case 'FortiSwitch': return '#7CB342';
+        case 'WiFiClient': return '#9C27B0';
+        case 'SwitchDevice': return '#607d8b';
+        default: return '#757575';
+      }
+    }
+
+    function getShape(type) {
+      switch(type) {
+        case 'FortiGate': return 'round-rectangle';
+        case 'FortiAP': return 'triangle';
+        case 'FortiSwitch': return 'round-rectangle';
+        case 'WiFiClient': return 'ellipse';
+        case 'SwitchDevice': return 'diamond';
+        default: return 'ellipse';
+      }
+    }
+
+    function getNodeSize(type) {
+      switch(type) {
+        case 'FortiGate': return 60;
+        case 'FortiSwitch': return 50;
+        case 'FortiAP': return 45;
+        default: return 40;
+      }
+    }
+
+    function resetLayout() {
+      if (cy) {
+        cy.layout({ 
+          name: 'cose', 
+          animate: true, 
+          animationDuration: 500,
+          nodeRepulsion: 8000,
+          idealEdgeLength: 100
+        }).run();
+      }
+    }
+
+    function fitToScreen() {
+      if (cy) {
+        cy.fit(null, 50);
+      }
+    }
+
+    function exportTopology(format) {
+      if (!cy) {
+        showError('No topology loaded');
+        return;
+      }
+      
+      const data = cy.json();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `topology-${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function reloadData() {
+      document.getElementById('loading').style.display = 'block';
+      fetchTopology().then(data => {
+        if (cy) {
+          cy.destroy();
+        }
+        initializeTopology(data);
+        hideLoading();
+      }).catch(error => {
+        console.error('Reload failed:', error);
+        showError('Failed to reload topology');
+        hideLoading();
+      });
+    }
+
+    async function fetchTopology() {
+      try {
+        // Try to fetch from API first
+        const res = await fetch('/api/network/topology/all-devices');
+        
+        // Check if response is JSON
+        const contentType = res.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const data = await res.json();
+          console.log('Loaded topology from API:', data);
+          return data;
+        } else {
+          console.warn('API returned non-JSON response, using sample data');
+          return sampleData;
+        }
+      } catch (error) {
+        console.warn('API not available, using sample data:', error);
+        return sampleData;
+      }
+    }
+
+    function initializeTopology(data) {
+      if (!data || !data.nodes || !Array.isArray(data.nodes)) {
+        console.error('Invalid topology data:', data);
+        showError('Invalid topology data structure');
+        return;
+      }
+
+      const elements = [
+        ...data.nodes.map(n => {
+          const size = getNodeSize(n.type);
+          return {
+            data: { 
+              id: n.id, 
+              label: n.label, 
+              type: n.type,
+              ip: n.ip || 'N/A',
+              status: n.status || 'unknown'
+            },
+            style: {
+              'background-color': getColor(n.type, n.status),
+              'shape': getShape(n.type),
+              'width': size,
+              'height': size,
+              'label': n.label,
+              'text-valign': 'bottom',
+              'text-halign': 'center',
+              'text-margin-y': 5,
+              'font-size': '12px',
+              'font-weight': 'bold',
+              'color': '#333',
+              'border-width': 3,
+              'border-color': '#fff'
+            }
+          };
+        }),
+        ...data.edges.map(e => {
+          const edgeColor = e.type === 'fortilink' ? '#4CAF50' : 
+                           e.type === 'capwap' ? '#2196F3' : 
+                           e.type === 'ethernet' ? '#FF9800' : '#888';
+          const edgeWidth = e.type === 'fortilink' ? 4 : 
+                           e.type === 'capwap' ? 2 : 2;
+          
+          return {
+            data: { 
+              id: `${e.source}-${e.target}`, 
+              source: e.source, 
+              target: e.target, 
+              type: e.type || 'unknown',
+              bandwidth: e.bandwidth || ''
+            },
+            style: {
+              'line-color': edgeColor,
+              'width': edgeWidth,
+              'target-arrow-shape': 'triangle',
+              'target-arrow-color': edgeColor,
+              'curve-style': 'bezier'
+            }
+          };
+        })
+      ];
+
+      cy = cytoscape({
+        container: document.getElementById('cy'),
+        elements: elements,
+        style: [
+          {
+            selector: 'node',
+            style: {
+              'label': 'data(label)',
+              'text-valign': 'bottom',
+              'text-halign': 'center',
+              'text-margin-y': 5,
+              'font-size': '12px',
+              'font-weight': 'bold'
+            }
+          },
+          {
+            selector: 'node:selected',
+            style: {
+              'border-width': 5,
+              'border-color': '#FF5722',
+              'overlay-color': '#FF5722',
+              'overlay-opacity': 0.2
+            }
+          },
+          {
+            selector: 'edge',
+            style: {
+              'curve-style': 'bezier',
+              'target-arrow-shape': 'triangle',
+              'width': 2,
+              'opacity': 0.8
+            }
+          },
+          {
+            selector: 'edge:selected',
+            style: {
+              'line-color': '#FF5722',
+              'target-arrow-color': '#FF5722',
+              'width': 4
+            }
+          }
+        ],
+        layout: { 
+          name: 'cose',
+          animate: true,
+          animationDuration: 1000,
+          nodeRepulsion: 8000,
+          idealEdgeLength: 120,
+          edgeElasticity: 100,
+          nestingFactor: 5,
+          gravity: 80,
+          numIter: 1000,
+          initialTemp: 200,
+          coolingFactor: 0.95,
+          minTemp: 1.0
+        },
+        minZoom: 0.3,
+        maxZoom: 3
+      });
+
+      // Add click handler to show device details
+      cy.on('tap', 'node', function(evt) {
+        const node = evt.target;
+        const data = node.data();
+        const info = `
+Device: ${data.label}
+Type: ${data.type}
+IP Address: ${data.ip}
+Status: ${data.status}
+        `.trim();
+        alert(info);
+      });
+
+      // Add double-click to focus on node
+      cy.on('dbltap', 'node', function(evt) {
+        const node = evt.target;
+        cy.animate({
+          fit: {
+            eles: node.neighborhood(),
+            padding: 50
+          },
+          duration: 500
+        });
+      });
+
+      // Update status indicator
+      document.getElementById('device-count').textContent = 
+        `${data.nodes.length} devices • ${data.edges.length} connections`;
+
+      console.log('Topology initialized successfully');
+    }
+
+    // Check if Cytoscape loaded
+    if (typeof cytoscape === 'undefined') {
+      showError('Failed to load Cytoscape library. Check your internet connection.');
+      hideLoading();
+    } else {
+      // Initialize on page load
+      fetchTopology().then(data => {
+        initializeTopology(data);
+        hideLoading();
+      }).catch(error => {
+        console.error('Failed to initialize topology:', error);
+        showError('Failed to load topology: ' + error.message);
+        hideLoading();
+      });
+    }
+  </script>
+</body>
+</html>

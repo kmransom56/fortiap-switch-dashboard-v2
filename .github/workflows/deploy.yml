@@ -1,0 +1,99 @@
+name: Deploy
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+        - staging
+        - production
+
+jobs:
+  deploy:
+    name: Deploy to ${{ github.event.inputs.environment || 'staging' }}
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ github.event.inputs.environment || 'staging' }}
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Use Node.js 16.x
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16.x'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run tests
+        run: npm test
+        
+      # Create .env file from secrets
+      - name: Create environment file
+        run: |
+          echo "FORTIGATE_HOST=${{ secrets.FORTIGATE_HOST }}" > .env
+          echo "FORTIGATE_PORT=${{ secrets.FORTIGATE_PORT }}" >> .env
+          echo "FORTIGATE_USERNAME=${{ secrets.FORTIGATE_USERNAME }}" >> .env
+          echo "FORTIGATE_PASSWORD=${{ secrets.FORTIGATE_PASSWORD }}" >> .env
+          echo "VERIFY_SSL=${{ secrets.VERIFY_SSL }}" >> .env
+          echo "PORT=${{ secrets.PORT || 3000 }}" >> .env
+      
+      # Build if needed (e.g., minification, bundling)
+      - name: Build
+        run: |
+          if [ -f "package.json" ] && grep -q "build" "package.json"; then
+            npm run build
+          else
+            echo "No build script found in package.json, skipping build step"
+          fi
+      
+      # Option 1: Deploy to a VPS/server using SSH
+      - name: Deploy to server
+        if: ${{ vars.DEPLOYMENT_TYPE == 'ssh' }}
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            cd ${{ secrets.DEPLOY_PATH }}
+            git pull
+            npm ci --production
+            pm2 restart fortiap-dashboard || pm2 start server.js --name fortiap-dashboard
+      
+      # Option 2: Deploy to AWS Elastic Beanstalk
+      - name: Deploy to AWS Elastic Beanstalk
+        if: ${{ vars.DEPLOYMENT_TYPE == 'aws-eb' }}
+        uses: einaregilsson/beanstalk-deploy@v20
+        with:
+          aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          application_name: ${{ secrets.EB_APPLICATION_NAME }}
+          environment_name: ${{ secrets.EB_ENVIRONMENT_NAME }}
+          version_label: "v${{ github.run_number }}-${{ github.sha }}"
+          region: ${{ secrets.AWS_REGION }}
+          deployment_package: deploy.zip
+      
+      # Option 3: Deploy to Azure Web App
+      - name: Deploy to Azure Web App
+        if: ${{ vars.DEPLOYMENT_TYPE == 'azure' }}
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ secrets.AZURE_WEBAPP_NAME }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: .
+      
+      # Notify on success
+      - name: Notify deployment success
+        if: success()
+        run: |
+          echo "Successfully deployed to ${{ github.event.inputs.environment || 'staging' }}"

@@ -1,0 +1,13 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+                                                                       
+Name: libvisio-@VSD_MAJOR_VERSION@.@VSD_MINOR_VERSION@
+Description: Library for parsing the visio file format structure
+Version: @VERSION@
+Requires: librevenge-0.0
+Libs: -L${libdir} -lvisio-@VSD_MAJOR_VERSION@.@VSD_MINOR_VERSION@
+Cflags: -I${includedir}/libvisio-@VSD_MAJOR_VERSION@.@VSD_MINOR_VERSION@
+
+Requires.private: icu-i18n libxml-2.0
