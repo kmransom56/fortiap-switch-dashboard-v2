@@ -12,7 +12,12 @@
     "test:python": "pytest",
     "lint": "eslint . --ext .js,.json",
     "lint:fix": "eslint . --ext .js,.json --fix",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "ralph": "node ralph-interactive.js",
+    "ralph:status": "node ralph-cli.js status",
+    "ralph:metrics": "node ralph-cli.js metrics",
+    "ralph:reset": "node ralph-cli.js reset",
+    "ralph:help": "node ralph-cli.js help"
   },
   "dependencies": {
     "axios": "^1.6.2",
@@ -46,7 +51,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/YOUR_USERNAME/fortiap-switch-dashboard-v2.git"
+    "url": "https://github.com/kmransom56/fortiap-switch-dashboard-v2.git"
   },
   "keywords": [
     "fortinet",
@@ -63,10 +68,10 @@
     "force-graph",
     "connected-devices"
   ],
-  "author": "Your Name",
+  "author": "kmransom56",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/YOUR_USERNAME/fortiap-switch-dashboard-v2/issues"
+    "url": "https://github.com/kmransom56/fortiap-switch-dashboard-v2/issues"
   },
-  "homepage": "https://github.com/YOUR_USERNAME/fortiap-switch-dashboard-v2#readme"
+  "homepage": "https://github.com/kmransom56/fortiap-switch-dashboard-v2#readme"
 }

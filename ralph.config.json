@@ -1,0 +1,85 @@
+{
+  "project": {
+    "name": "fortiap-switch-dashboard-v2",
+    "version": "2.0.0",
+    "rootPath": "/home/keransom/fortiap-switch-dashboard-v2",
+    "specFile": "RALPH_SPEC.md"
+  },
+  "claude": {
+    "model": "claude-sonnet-4.5",
+    "timeout": 300000,
+    "maxTokens": 8000,
+    "temperature": 0.7
+  },
+  "iteration": {
+    "maxIterations": 10,
+    "minIterationDelay": 5000,
+    "maxConsecutiveNoOps": 2,
+    "maxConsecutiveErrors": 3
+  },
+  "commands": {
+    "install": "npm install",
+    "test": "npm test",
+    "lint": "npm run lint",
+    "build": "echo 'No build step configured'",
+    "start": "npm start"
+  },
+  "evaluation": {
+    "testCommand": "npm test",
+    "lintCommand": "npm run lint",
+    "buildCommand": "echo 'Build check passed'",
+    "requireAllPass": false,
+    "minimumTestCoverage": 0
+  },
+  "exitConditions": {
+    "allTestsPass": true,
+    "noLintErrors": true,
+    "buildSucceeds": true,
+    "noGitDiffForIterations": 2,
+    "maxIterationsReached": true
+  },
+  "gitConfig": {
+    "autoCommit": false,
+    "commitMessagePrefix": "[Ralph]",
+    "branchPrefix": "ralph/",
+    "createPRs": false
+  },
+  "logging": {
+    "level": "info",
+    "logFile": ".ralph/logs/ralph.log",
+    "saveConversations": true,
+    "conversationDir": ".ralph/conversations"
+  },
+  "safety": {
+    "dryRun": false,
+    "requireConfirmation": false,
+    "backupBeforeStart": true,
+    "protectedFiles": [
+      ".env",
+      ".env.local",
+      ".env.production",
+      "package-lock.json",
+      "ralph.config.json"
+    ],
+    "protectedDirectories": [
+      "node_modules",
+      ".git",
+      "cache"
+    ]
+  },
+  "monitoring": {
+    "trackProgress": true,
+    "saveStateFile": true,
+    "stateFile": ".ralph/state.json",
+    "metricsFile": ".ralph/metrics.json"
+  },
+  "prompts": {
+    "systemPrompt": "You are an AI assistant helping to develop a FortiAP/Switch Dashboard. Follow the specifications in RALPH_SPEC.md closely. Focus on code quality, testing, and maintaining the existing architecture.",
+    "taskPrefix": "Based on the project spec in RALPH_SPEC.md, ",
+    "contextFiles": [
+      "RALPH_SPEC.md",
+      "README.md",
+      "package.json"
+    ]
+  }
+}
