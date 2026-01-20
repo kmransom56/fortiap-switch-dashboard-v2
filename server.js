@@ -1378,4 +1378,7 @@ try {
   module.exports.MemoryCache = MemoryCache;
   module.exports.loadCachedData = loadCachedData;
   module.exports.loadFallbackData = loadFallbackData;
+  module.exports.saveDataToCache = saveDataToCache;
+  module.exports.transformFortiAPData = transformFortiAPData;
+  module.exports.transformFortiSwitchData = transformFortiSwitchData;
 } catch (e) { /* ignore during app boots */ }
