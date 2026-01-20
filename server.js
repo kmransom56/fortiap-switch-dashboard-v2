@@ -29,6 +29,10 @@ const { apiLimiter, strictLimiter, healthCheckLimiter } = require('./middleware/
 const { sanitizeInput } = require('./middleware/validation');
 const { asyncHandler, notFoundHandler, errorHandler, ExternalServiceError } = require('./middleware/errorHandler');
 
+// Import Swagger documentation
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./config/swagger');
+
 const app = express();
 const port = process.env.DASHBOARD_PORT || 13000;
 
@@ -41,12 +45,13 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // Needed for D3.js and Babylon.js
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // Needed for D3.js, Babylon.js, and Swagger UI
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https:"],
       connectSrc: ["'self'"],
       frameSrc: ["'none'"],
-      objectSrc: ["'none'"]
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"]
     }
   },
   crossOriginEmbedderPolicy: false, // Needed for some 3D libraries
@@ -1180,6 +1185,26 @@ app.get('/health', healthCheckLimiter, (req, res) => {
  */
 app.get('/metrics', apiLimiter, (req, res) => {
   res.json(performanceMetrics);
+});
+
+/**
+ * API Documentation with Swagger UI
+ */
+app.use('/api-docs', swaggerUi.serve);
+app.get('/api-docs', swaggerUi.setup(swaggerSpec, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'FortiAP/Switch Dashboard API',
+  swaggerOptions: {
+    persistAuthorization: true
+  }
+}));
+
+/**
+ * Swagger JSON endpoint
+ */
+app.get('/api-docs.json', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(swaggerSpec);
 });
 
 /**
