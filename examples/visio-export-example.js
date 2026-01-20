@@ -1,11 +1,11 @@
 /**
  * Complete Example: Export FortiGate Network Topology to Visio
- * 
+ *
  * This example demonstrates how to:
  * 1. Fetch topology data from FortiGate API
  * 2. Build device relationships and connections
  * 3. Export data in formats suitable for Visio
- * 
+ *
  * Usage:
  *   node examples/visio-export-example.js
  */
@@ -22,7 +22,7 @@ const config = {
   // Option 1: Use the dashboard API (recommended)
   useDashboardAPI: true,
   dashboardURL: 'http://localhost:13000',
-  
+
   // Option 2: Direct FortiGate API access
   fortigate: {
     host: '192.168.1.1',
@@ -30,7 +30,7 @@ const config = {
     apiToken: 'YOUR_API_TOKEN_HERE',
     verifySSL: false
   },
-  
+
   // Output options
   output: {
     json: './visio-topology.json',
@@ -49,7 +49,7 @@ const config = {
  */
 async function fetchFromDashboard() {
   console.log('Fetching topology from dashboard API...');
-  
+
   try {
     const response = await axios.get(`${config.dashboardURL}/api/topology`);
     console.log('✓ Successfully fetched topology from dashboard');
@@ -65,16 +65,16 @@ async function fetchFromDashboard() {
  */
 async function fetchFromFortiGate() {
   console.log('Fetching topology from FortiGate API...');
-  
+
   const httpsAgent = new https.Agent({
     rejectUnauthorized: config.fortigate.verifySSL
   });
-  
+
   const baseURL = `https://${config.fortigate.host}:${config.fortigate.port}/api/v2`;
   const headers = {
     'Authorization': `Bearer ${config.fortigate.apiToken}`
   };
-  
+
   try {
     // Fetch all required endpoints in parallel
     const [systemStatus, switches, aps, devices, switchBios] = await Promise.all([
@@ -84,9 +84,9 @@ async function fetchFromFortiGate() {
       axios.get(`${baseURL}/monitor/user/detected-device/query`, { headers, httpsAgent }).catch(() => ({ data: { results: [] } })),
       axios.get(`${baseURL}/monitor/switch-controller/managed-switch/bios`, { headers, httpsAgent }).catch(() => ({ data: { results: [] } }))
     ]);
-    
+
     console.log('✓ Successfully fetched data from FortiGate');
-    
+
     // Build topology structure
     return buildTopologyStructure(
       systemStatus.data.results,
@@ -112,7 +112,7 @@ function buildTopologyStructure(systemStatus, switches, aps, devices, switchBios
       macToSwitch[sw.bios.burn_in_mac.toLowerCase()] = sw.switch_id;
     }
   });
-  
+
   // Transform switches
   const transformedSwitches = switches.map(sw => ({
     name: sw.name || sw['switch-id'] || 'Unknown',
@@ -129,7 +129,7 @@ function buildTopologyStructure(systemStatus, switches, aps, devices, switchBios
       speed: portData['rx-packets'] > 0 ? '1000M' : '0M'
     }))
   }));
-  
+
   // Transform APs
   const transformedAPs = aps.map(ap => ({
     name: ap.name || ap.wtp_id || 'Unknown',
@@ -141,12 +141,12 @@ function buildTopologyStructure(systemStatus, switches, aps, devices, switchBios
     clients: ap.clients || 0,
     ssids: ap.ssid?.map(s => s.list).flat() || []
   }));
-  
+
   // Build device connections
   const connections = devices.map(device => {
     const masterMac = device.master_mac ? device.master_mac.toLowerCase() : null;
     const switchId = masterMac ? macToSwitch[masterMac] : null;
-    
+
     return {
       device_mac: device.mac,
       device_ip: device.ipv4_address,
@@ -156,7 +156,7 @@ function buildTopologyStructure(systemStatus, switches, aps, devices, switchBios
       online: device.is_online
     };
   });
-  
+
   return {
     fortigate: {
       hostname: systemStatus.hostname || config.fortigate.host,
@@ -192,7 +192,7 @@ function exportDevicesCSV(topology) {
   const rows = [
     ['Name', 'Type', 'IP Address', 'Model', 'Serial', 'Status', 'Firmware']
   ];
-  
+
   // Add FortiGate
   rows.push([
     topology.fortigate.hostname,
@@ -203,7 +203,7 @@ function exportDevicesCSV(topology) {
     'up',
     topology.fortigate.version
   ]);
-  
+
   // Add switches
   topology.switches.forEach(sw => {
     rows.push([
@@ -216,7 +216,7 @@ function exportDevicesCSV(topology) {
       sw.firmware_version
     ]);
   });
-  
+
   // Add APs
   topology.aps.forEach(ap => {
     rows.push([
@@ -229,7 +229,7 @@ function exportDevicesCSV(topology) {
       ap.firmware_version
     ]);
   });
-  
+
   const csv = rows.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
   fs.writeFileSync(config.output.csvDevices, csv);
   console.log(`✓ Exported devices CSV: ${config.output.csvDevices}`);
@@ -243,7 +243,7 @@ function exportConnectionsCSV(topology) {
   const rows = [
     ['From Device', 'From Interface', 'To Device', 'To Interface', 'Status', 'Type', 'Speed', 'PoE']
   ];
-  
+
   // Add FortiLink connections (FortiGate to Switches)
   topology.switches.forEach(sw => {
     rows.push([
@@ -257,7 +257,7 @@ function exportConnectionsCSV(topology) {
       'N/A'
     ]);
   });
-  
+
   // Add device connections (Switches to APs/devices)
   if (topology.connections) {
     topology.connections.forEach(conn => {
@@ -276,7 +276,7 @@ function exportConnectionsCSV(topology) {
       }
     });
   }
-  
+
   const csv = rows.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
   fs.writeFileSync(config.output.csvConnections, csv);
   console.log(`✓ Exported connections CSV: ${config.output.csvConnections}`);
@@ -307,7 +307,7 @@ function exportVisioXML(topology) {
 
   let shapeID = 1;
   let y = 8;
-  
+
   // Add FortiGate shape
   xml += `
         <Shape ID="${shapeID}" Type="Shape" Name="${topology.fortigate.hostname}">
@@ -322,7 +322,7 @@ function exportVisioXML(topology) {
 `;
   shapeID++;
   y -= 2;
-  
+
   // Add switch shapes
   let x = 2;
   topology.switches.forEach(sw => {
@@ -340,10 +340,10 @@ function exportVisioXML(topology) {
     shapeID++;
     x += 2;
   });
-  
+
   y -= 2;
   x = 2;
-  
+
   // Add AP shapes
   topology.aps.forEach(ap => {
     xml += `
@@ -360,14 +360,14 @@ function exportVisioXML(topology) {
     shapeID++;
     x += 2;
   });
-  
+
   xml += `
       </Shapes>
     </Page>
   </Pages>
 </VisioDocument>
 `;
-  
+
   fs.writeFileSync(config.output.visioXML, xml);
   console.log(`✓ Exported Visio XML: ${config.output.visioXML}`);
   return xml;
@@ -380,29 +380,29 @@ function printSummary(topology) {
   console.log('\n' + '='.repeat(70));
   console.log('NETWORK TOPOLOGY SUMMARY');
   console.log('='.repeat(70));
-  
+
   console.log(`\n🔥 FortiGate: ${topology.fortigate.hostname}`);
   console.log(`   IP: ${topology.fortigate.ip}`);
   console.log(`   Model: ${topology.fortigate.model}`);
   console.log(`   Version: ${topology.fortigate.version}`);
-  
+
   console.log(`\n🔀 FortiSwitches: ${topology.switches.length}`);
   topology.switches.forEach(sw => {
     const portsUp = sw.ports.filter(p => p.status === 'up').length;
     console.log(`   • ${sw.name} (${sw.ip}) - ${portsUp}/${sw.ports.length} ports up`);
   });
-  
+
   console.log(`\n📡 FortiAPs: ${topology.aps.length}`);
   topology.aps.forEach(ap => {
     console.log(`   • ${ap.name} (${ap.ip}) - ${ap.clients} clients - ${ap.status}`);
   });
-  
+
   if (topology.connections && topology.connections.length > 0) {
     console.log(`\n🔗 Detected Connections: ${topology.connections.length}`);
     const onlineCount = topology.connections.filter(c => c.online).length;
     console.log(`   Online: ${onlineCount} | Offline: ${topology.connections.length - onlineCount}`);
   }
-  
+
   console.log('\n' + '='.repeat(70));
 }
 
@@ -412,7 +412,7 @@ function printSummary(topology) {
 
 async function main() {
   console.log('\n🚀 FortiGate Network Topology Export for Visio\n');
-  
+
   try {
     // Step 1: Fetch topology data
     let topology;
@@ -421,24 +421,24 @@ async function main() {
     } else {
       topology = await fetchFromFortiGate();
     }
-    
+
     // Step 2: Print summary
     printSummary(topology);
-    
+
     // Step 3: Export in multiple formats
     console.log('\n📤 Exporting topology data...\n');
     exportJSON(topology);
     exportDevicesCSV(topology);
     exportConnectionsCSV(topology);
     exportVisioXML(topology);
-    
+
     console.log('\n✅ Export complete! Files ready for Visio import.\n');
     console.log('Next steps:');
     console.log('1. Open Microsoft Visio');
     console.log('2. Import CSV files or use XML directly');
     console.log('3. Apply network stencils and styling');
     console.log('4. Customize layout and connections\n');
-    
+
   } catch (error) {
     console.error('\n❌ Error:', error.message);
     console.error('\nTroubleshooting tips:');

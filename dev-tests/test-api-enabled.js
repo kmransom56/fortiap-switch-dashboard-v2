@@ -20,7 +20,7 @@ async function testApiEnabled() {
     // Test 1: Check if API endpoint responds at all (without auth)
     console.log('\n=== Test 1: Check if API endpoint is accessible ===');
     const testUrl = `https://${host}:${port}/api/v2/monitor/system/status`;
-    
+
     try {
       const response = await axios({
         method: 'get',
@@ -34,7 +34,7 @@ async function testApiEnabled() {
       });
 
       console.log(`Response status: ${response.status}`);
-      
+
       if (response.status === 401) {
         console.log('✅ API endpoint is accessible (401 = authentication required)');
         console.log('This confirms REST API is enabled and responding');
@@ -55,7 +55,7 @@ async function testApiEnabled() {
     console.log('2. System > Administrators > REST API Admin exists with super_admin profile');
     console.log('3. Token generated from: execute api-user generate-key <admin-name>');
     console.log('4. No trusted host restrictions (or your IP is in trusted hosts)');
-    
+
     // Test 3: Try with different header formats
     console.log('\n=== Test 3: Testing token format variations ===');
     const tokens = [
@@ -65,9 +65,9 @@ async function testApiEnabled() {
 
     for (const token of tokens) {
       if (!token) continue;
-      
+
       console.log(`\nTrying token: ${token.substring(0, 10)}...`);
-      
+
       try {
         const response = await axios({
           method: 'get',

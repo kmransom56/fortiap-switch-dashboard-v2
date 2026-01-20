@@ -4,7 +4,7 @@ const path = require('path');
 
 // Mock dotenv config and dependencies before requiring the app
 jest.mock('dotenv', () => ({
-  config: jest.fn(),
+  config: jest.fn()
 }));
 
 // Mock fs functions
@@ -15,14 +15,14 @@ jest.mock('fs', () => {
     readFileSync: jest.fn(),
     existsSync: jest.fn(),
     writeFileSync: jest.fn(),
-    mkdirSync: jest.fn(),
+    mkdirSync: jest.fn()
   };
 });
 
 // Mock https
 jest.mock('https', () => {
   return {
-    Agent: jest.fn(() => ({})),
+    Agent: jest.fn(() => ({}))
   };
 });
 
@@ -50,11 +50,11 @@ describe('Server API', () => {
   beforeEach(() => {
     // Reset module cache before each test
     jest.resetModules();
-    
+
     // Mock yaml data for tests
     const now = new Date().toISOString();
     mockYaml = `fortiaps:\n  - name: test-ap\n    status: up\nfortiswitches:\n  - name: test-switch\n    status: up\nhistorical_data:\n  - timestamp: ${now}\n`;
-    
+
     // Set up fs mocks: cache files should appear missing; dashboard_data.yaml should exist
     // For tests ensure all paths exist so YAML fallback is reachable
     fs.existsSync.mockReturnValue(true);
@@ -66,11 +66,11 @@ describe('Server API', () => {
       // Default return JSON for other cache reads
       return JSON.stringify({ _timestamp: Date.now(), data: [] });
     });
-    
+
     // Now import the app
     app = require('../server');
   });
-  
+
   afterEach(async () => {
     // Clean up between tests
     if (app && typeof app.close === 'function') {
@@ -79,7 +79,7 @@ describe('Server API', () => {
 
     jest.clearAllMocks();
   });
-  
+
   describe('API Status endpoint', () => {
     test('GET /api/status should return connection status', async () => {
       const mockStatus = {
@@ -90,115 +90,115 @@ describe('Server API', () => {
           serial: '12345'
         }
       };
-      
+
       // Mock the API response
       const axios = require('axios');
-      axios.default.mockImplementationOnce(() => 
-        Promise.resolve({ 
-          status: 200, 
-          data: { 
-            results: { 
+      axios.default.mockImplementationOnce(() =>
+        Promise.resolve({
+          status: 200,
+          data: {
+            results: {
               version: '7.0.0',
               hostname: 'test-fortigate',
               serial: '12345'
-            } 
-          } 
+            }
+          }
         })
       );
-      
+
       const response = await request(app).get('/api/status');
-      
+
       expect(response.status).toBe(200);
       expect(response.body).toMatchObject({
         status: 'connected'
       });
       expect(response.body.fortigate).toBeDefined();
     });
-    
+
     test('GET /api/status should handle API errors', async () => {
       // Mock API failure
       const axios = require('axios');
-      axios.default.mockImplementationOnce(() => 
+      axios.default.mockImplementationOnce(() =>
         Promise.reject(new Error('API connection failed'))
       );
-      
+
       const response = await request(app).get('/api/status');
-      
+
       expect(response.status).toBe(200);
       expect(response.body).toMatchObject({
         status: 'disconnected'
       });
     });
   });
-  
+
   describe('Data endpoints', () => {
     test('GET /api/fortiaps should return FortiAP data', async () => {
       // Mock successful API response
       const axios = require('axios');
-      axios.default.mockImplementationOnce(() => 
-        Promise.resolve({ 
-          status: 200, 
-          data: { 
+      axios.default.mockImplementationOnce(() =>
+        Promise.resolve({
+          status: 200,
+          data: {
             results: [
               { name: 'ap1', model: 'FortiAP-431F', status: 'up' }
-            ] 
-          } 
+            ]
+          }
         })
       );
-      
+
       // debug: ensure cache content read by mocked fs
       // console.log('DEBUG cache read:', fs.readFileSync(path.resolve(__dirname, '../cache/fortiaps.json')));
       const response = await request(app).get('/api/fortiaps');
-      
+
       expect(response.status).toBe(200);
       expect(Array.isArray(response.body)).toBe(true);
     });
-    
+
     test('GET /api/fortiswitches should return FortiSwitch data', async () => {
       // Mock successful API response
       const axios = require('axios');
-      axios.default.mockImplementationOnce(() => 
-        Promise.resolve({ 
-          status: 200, 
-          data: { 
+      axios.default.mockImplementationOnce(() =>
+        Promise.resolve({
+          status: 200,
+          data: {
             results: [
               { name: 'switch1', model: 'FortiSwitch-424E', status: 'up' }
-            ] 
-          } 
+            ]
+          }
         })
       );
-      
+
       const response = await request(app).get('/api/fortiswitches');
-      
+
       expect(response.status).toBe(200);
       expect(Array.isArray(response.body)).toBe(true);
     });
-    
+
     test('GET /api/historical should return historical data', async () => {
       const response = await request(app).get('/api/historical');
-      
+
       expect(response.status).toBe(200);
       expect(Array.isArray(response.body)).toBe(true);
     });
-    
+
     test('GET /api/data-source should return data source info', async () => {
       const response = await request(app).get('/api/data-source');
-      
+
       expect(response.status).toBe(200);
       expect(response.body).toMatchObject({
         source: expect.any(String)
       });
     });
   });
-  
+
   describe('Fallback functionality', () => {
     test('Should fall back to YAML data when API fails', async () => {
       // Mock API failure
       const axios = require('axios');
-      axios.default.mockImplementationOnce(() => 
+      axios.default.mockImplementationOnce(() =>
         Promise.reject(new Error('API connection failed'))
       );
-      
+
       // Force cache to be missing so YAML fallback is used
       fs.existsSync.mockImplementation((p) => {
         const lower = String(p).toLowerCase();
@@ -222,7 +222,7 @@ describe('Server API', () => {
       app = require('../server');
 
       const response = await request(app).get('/api/fortiaps');
-      
+
       expect(response.status).toBe(200);
       expect(Array.isArray(response.body)).toBe(true);
       // YAML fallback returned (may be empty); ensure array result

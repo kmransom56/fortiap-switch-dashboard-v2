@@ -18,16 +18,16 @@ async function testEndpoints() {
   const endpoints = [
     // System endpoints
     { name: 'System Status', path: '/api/v2/monitor/system/status' },
-    
+
     // FortiAP endpoints
     { name: 'FortiAP Managed APs', path: '/api/v2/monitor/wifi/managed_ap' },
     { name: 'FortiAP Client', path: '/api/v2/monitor/wifi/client' },
-    
+
     // FortiSwitch endpoints (various possibilities)
     { name: 'FortiSwitch Managed Switch', path: '/api/v2/monitor/switch-controller/managed-switch' },
     { name: 'FortiSwitch FSW Managed Switch', path: '/api/v2/monitor/switch-controller/fsw-managed-switch' },
     { name: 'FortiSwitch Summary', path: '/api/v2/monitor/switch-controller/managed-switch/summary' },
-    
+
     // Historical/Stats endpoints
     { name: 'WiFi AP Stats', path: '/api/v2/monitor/wifi/ap_status' },
     { name: 'Switch Stats', path: '/api/v2/monitor/switch-controller/managed-switch/port-stats' }

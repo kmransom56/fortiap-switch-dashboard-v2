@@ -1,6 +1,6 @@
 /**
  * FortiGate Dashboard Backend Server - Optimized Production Version
- * 
+ *
  * Features:
  * - Token-based FortiGate API authentication with caching
  * - In-memory caching with TTL and automatic cleanup
@@ -47,10 +47,10 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
       scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // Needed for D3.js, Babylon.js, and Swagger UI
-      fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      imgSrc: ["'self'", "data:", "https:"],
+      fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+      imgSrc: ["'self'", 'data:', 'https:'],
       connectSrc: ["'self'"],
       frameSrc: ["'none'"],
       objectSrc: ["'none'"],
@@ -58,7 +58,7 @@ app.use(helmet({
     }
   },
   crossOriginEmbedderPolicy: false, // Needed for some 3D libraries
-  crossOriginResourcePolicy: { policy: "cross-origin" }
+  crossOriginResourcePolicy: { policy: 'cross-origin' }
 }));
 
 /**
@@ -159,7 +159,7 @@ class MemoryCache {
 
   get(key) {
     const item = this.cache.get(key);
-    
+
     if (!item) {
       performanceMetrics.cacheMisses++;
       return null;
@@ -342,13 +342,13 @@ async function makeFortiRequest(endpoint, method = 'GET', data = null, useCache 
     // Handle HTTP errors
     if (response.status >= 400) {
       let errorMsg = response.statusText;
-      
+
       try {
         const errorData = typeof response.data === 'object'
           ? response.data
           : JSON.parse(response.data || '{}');
-        
-        errorMsg = errorData.error?.message || errorData.msg || 
+
+        errorMsg = errorData.error?.message || errorData.msg ||
                   JSON.stringify(errorData) || response.statusText;
       } catch (e) {
         // Keep original error message
@@ -377,7 +377,7 @@ async function makeFortiRequest(endpoint, method = 'GET', data = null, useCache 
     return result;
   } catch (error) {
     console.error(`Error making FortiOS API request to ${endpoint}:`, error.message);
-    
+
     if (error.response) {
       console.error('Response details:', {
         status: error.response.status,
@@ -405,7 +405,7 @@ function loadFallbackData(type) {
     // Fall back to YAML data
     const filePath = path.join(__dirname, 'dashboard_data.yaml');
     console.log(`Loading fallback ${type} from ${filePath}`);
-    
+
     try {
       const yamlData = fs.readFileSync(filePath, 'utf8');
       const data = yaml.load(yamlData) || {};
@@ -448,7 +448,7 @@ function loadCachedData(type) {
     const cachedData = JSON.parse(fs.readFileSync(cacheFilePath, 'utf8'));
 
     // Check if cache is valid (not older than 24 hours)
-    if (cachedData._timestamp && 
+    if (cachedData._timestamp &&
         (Date.now() - cachedData._timestamp) < 24 * 60 * 60 * 1000) {
       console.log(`Valid cached ${type} data found`);
       return cachedData.data;
@@ -487,7 +487,7 @@ function saveDataToCache(type, data) {
       _timestamp: Date.now(),
       data: data
     };
-    
+
     fs.writeFileSync(cacheFilePath, JSON.stringify(cacheData, null, 2));
     console.log(`Cached ${type} data saved to ${cacheFilePath}`);
   } catch (error) {
@@ -576,7 +576,7 @@ function transformFortiSwitchData(switches) {
       ports_up: ports_up,
       poe_power_consumption: Math.round(poe_power_consumption * 10) / 10,
       poe_power_budget: Math.round(poe_power_budget * 10) / 10,
-      poe_power_percentage: poe_power_budget > 0 
+      poe_power_percentage: poe_power_budget > 0
         ? Math.round((poe_power_consumption / poe_power_budget) * 100)
         : 0,
       temperature: 0,
@@ -734,14 +734,14 @@ app.get('/api/connected-devices', async (req, res) => {
     clientDevices.forEach(device => {
       const mac = (device.mac || '').toLowerCase();
       const deviceInterface = device.detected_interface || '';
-      const isWireless = deviceInterface.includes('wifi') || deviceInterface.includes('wlan') || 
+      const isWireless = deviceInterface.includes('wifi') || deviceInterface.includes('wlan') ||
                         device.hardware_family === 'FortiAP' ||
-                        (device.master_mac && apData.some(ap => 
+                        (device.master_mac && apData.some(ap =>
                           (ap.board_mac || '').toLowerCase() === (device.master_mac || '').toLowerCase()
                         ));
 
       const transformed = transformConnectedDeviceData(device, isWireless ? 'wireless' : 'wired');
-      
+
       // Enrich with ARP data
       if (!transformed.ip_address || transformed.ip_address === 'Unknown') {
         const arpIp = arpMap.get(mac);
@@ -752,7 +752,7 @@ app.get('/api/connected-devices', async (req, res) => {
 
       // Add AP information for wireless devices
       if (isWireless && device.master_mac) {
-        const connectedAP = apData.find(ap => 
+        const connectedAP = apData.find(ap =>
           (ap.board_mac || '').toLowerCase() === (device.master_mac || '').toLowerCase()
         );
         if (connectedAP) {
@@ -783,10 +783,10 @@ app.get('/api/connected-devices', async (req, res) => {
 
     // Add devices that are only in detected list (not in user devices)
     detectedMap.forEach((device, mac) => {
-      const existsInClients = clientDevices.some(d => 
+      const existsInClients = clientDevices.some(d =>
         (d.mac || '').toLowerCase() === mac
       );
-      
+
       if (!existsInClients) {
         const transformed = transformConnectedDeviceData(device, 'detected');
         detectedOnly.push(transformed);
@@ -847,7 +847,7 @@ app.get('/api/connected-devices', async (req, res) => {
 app.get('/api/historical', async (req, res) => {
   try {
     const apiData = await makeFortiRequest('/monitor/wifi/ap_status');
-    
+
     if (apiData && apiData.results) {
       console.log(`Retrieved historical data from API`);
       saveDataToCache('historical_data', apiData.results);
@@ -942,7 +942,7 @@ app.get('/api/topology', async (req, res) => {
     // Enrich switches with wired client counts
     const enrichedSwitches = switches.map(sw => {
       let wiredTotal = 0;
-      
+
       const ports = (sw.ports || []).map(p => {
         // Match devices by port and switch
         const bindingsForPort = deviceBindings.filter(b => {
@@ -1006,9 +1006,9 @@ app.get('/api/topology', async (req, res) => {
     clientDevices.forEach(device => {
       const mac = (device.mac || '').toLowerCase();
       const deviceInterface = device.detected_interface || '';
-      const isWireless = deviceInterface.includes('wifi') || deviceInterface.includes('wlan') || 
+      const isWireless = deviceInterface.includes('wifi') || deviceInterface.includes('wlan') ||
                         device.hardware_family === 'FortiAP' ||
-                        (device.master_mac && apData.some(ap => 
+                        (device.master_mac && apData.some(ap =>
                           (ap.board_mac || '').toLowerCase() === (device.master_mac || '').toLowerCase()
                         ));
 
@@ -1025,7 +1025,7 @@ app.get('/api/topology', async (req, res) => {
       if (isWireless) {
         // Find connected AP
         if (device.master_mac) {
-          const connectedAP = apData.find(ap => 
+          const connectedAP = apData.find(ap =>
             (ap.board_mac || '').toLowerCase() === (device.master_mac || '').toLowerCase()
           );
           if (connectedAP) {
@@ -1112,7 +1112,7 @@ app.get('/api/topology', async (req, res) => {
 app.get('/api/status', async (req, res) => {
   try {
     const apiData = await makeFortiRequest('/monitor/system/status');
-    
+
     if (apiData && apiData.results) {
       return res.json({
         status: 'connected',
@@ -1189,7 +1189,7 @@ app.use((req, res, next) => {
 
     // Calculate average
     performanceMetrics.averageResponseTime =
-      performanceMetrics.responseTimes.reduce((a, b) => a + b, 0) / 
+      performanceMetrics.responseTimes.reduce((a, b) => a + b, 0) /
       performanceMetrics.responseTimes.length;
   });
 
@@ -1326,11 +1326,11 @@ logger.info(`WebSocket endpoint: ws://localhost:${port}`);
  */
 process.on('SIGTERM', () => {
   console.log('SIGTERM received, shutting down gracefully...');
-  
+
   // Stop cache cleanup intervals
   memoryCache.stopCleanup();
   topologyCache.stopCleanup();
-  
+
   // Close server
   server.close(() => {
     console.log('Server closed');
@@ -1346,10 +1346,10 @@ process.on('SIGTERM', () => {
 
 process.on('SIGINT', () => {
   console.log('SIGINT received, shutting down...');
-  
+
   memoryCache.stopCleanup();
   topologyCache.stopCleanup();
-  
+
   server.close(() => {
     console.log('Server closed');
     process.exit(0);

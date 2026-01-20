@@ -23,15 +23,15 @@ async function testApiEndpoint(endpoint, description) {
   console.log(`\n----- Testing ${description} -----`);
   const url = `${FGT_URL}${endpoint}`;
   console.log(`URL: ${url}`);
-  
+
   try {
     // Add a timeout to avoid hanging
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
-    
+
     console.log('Making request...');
     const startTime = Date.now();
-    
+
     const response = await fetch(url, {
       headers: {
         'Authorization': `Bearer ${FGT_TOKEN}`,
@@ -39,19 +39,19 @@ async function testApiEndpoint(endpoint, description) {
       },
       signal: controller.signal
     });
-    
+
     const endTime = Date.now();
     clearTimeout(timeoutId);
-    
+
     console.log(`Response received in ${endTime - startTime}ms`);
     console.log(`Status: ${response.status} ${response.statusText}`);
-    
+
     // Log headers
     console.log('Response headers:');
     for (const [key, value] of response.headers.entries()) {
       console.log(`  ${key}: ${value}`);
     }
-    
+
     if (!response.ok) {
       const errorText = await response.text().catch(e => 'Error reading response body: ' + e.message);
       console.error('API request failed:');
@@ -59,12 +59,12 @@ async function testApiEndpoint(endpoint, description) {
       console.error(`Error body: ${errorText.substring(0, 1000)}`);
       return false;
     }
-    
+
     const data = await response.json().catch(e => {
       console.error('Error parsing JSON response:', e.message);
       return null;
     });
-    
+
     if (data) {
       console.log('Response data keys:', Object.keys(data));
       console.log('Success!');
@@ -75,13 +75,13 @@ async function testApiEndpoint(endpoint, description) {
     }
   } catch (error) {
     console.error('Error making API request:');
-    
+
     if (error.name === 'AbortError') {
       console.error('Request timed out after 10 seconds');
     } else if (error.cause) {
       console.error(`Error code: ${error.cause.code}`);
       console.error(`Error message: ${error.message}`);
-      
+
       if (error.cause.code === 'ENOTFOUND') {
         console.error('Host not found. Check the FortiGate IP address/hostname.');
       } else if (error.cause.code === 'ECONNREFUSED') {
@@ -92,7 +92,7 @@ async function testApiEndpoint(endpoint, description) {
     } else {
       console.error(`Error: ${error.message}`);
     }
-    
+
     return false;
   }
 }
@@ -100,36 +100,36 @@ async function testApiEndpoint(endpoint, description) {
 // Main function to run tests
 async function runTests() {
   console.log('\n===== FortiGate API Test Tool =====');
-  
+
   // Validate configuration
   if (!FGT_URL) {
     console.error('Error: FGT_URL not configured. Add FORTIGATE_URL or FGT_URL to .env file.');
     return;
   }
-  
+
   if (!FGT_TOKEN) {
     console.error('Error: API token not configured. Add FORTIGATE_API_TOKEN or FGT_TOKEN to .env file.');
     return;
   }
-  
+
   // Test endpoints
   const endpoints = [
     { path: '/api/v2/cmdb/system/status', desc: 'System Status' },
     { path: '/api/v2/monitor/wifi/managed_ap?format=JSON', desc: 'FortiAP List' },
     { path: '/api/v2/monitor/switch/controller/managed_switch?format=JSON', desc: 'FortiSwitch List' }
   ];
-  
+
   console.log(`\nRunning ${endpoints.length} tests...\n`);
-  
+
   let successCount = 0;
   for (const endpoint of endpoints) {
     const success = await testApiEndpoint(endpoint.path, endpoint.desc);
     if (success) successCount++;
   }
-  
+
   console.log(`\n===== Test Results =====`);
   console.log(`${successCount} of ${endpoints.length} tests passed`);
-  
+
   if (successCount === 0) {
     console.log('\nTroubleshooting Tips:');
     console.log('1. Verify FortiGate URL and port (https://ip:port) in .env');

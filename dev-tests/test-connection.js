@@ -29,12 +29,12 @@ console.log('');
 function pingTest() {
   return new Promise((resolve) => {
     console.log(`Test 1: Ping to ${hostname}`);
-    
+
     // Use appropriate ping command based on platform
-    const pingCmd = process.platform === 'win32' 
-      ? `ping -n 4 ${hostname}` 
+    const pingCmd = process.platform === 'win32'
+      ? `ping -n 4 ${hostname}`
       : `ping -c 4 ${hostname}`;
-    
+
     exec(pingCmd, (error, stdout, stderr) => {
       if (error) {
         console.log('❌ Ping failed:');
@@ -43,12 +43,12 @@ function pingTest() {
         resolve(false);
         return;
       }
-      
+
       // Check ping output
       const output = stdout.toString();
       console.log(output);
-      
-      if (output.includes('Request timed out') || 
+
+      if (output.includes('Request timed out') ||
           output.includes('100% packet loss') ||
           output.includes('Destination host unreachable')) {
         console.log('❌ Host is not responding to ping');
@@ -70,20 +70,20 @@ function pingTest() {
 function portTest() {
   return new Promise((resolve) => {
     console.log(`\nTest 2: TCP port check on ${hostname}:${port}`);
-    
+
     const socket = new net.Socket();
     let connected = false;
-    
+
     // Set a timeout for the connection attempt
     socket.setTimeout(5000);
-    
+
     socket.on('connect', () => {
       console.log(`✅ Successfully connected to ${hostname}:${port}`);
       connected = true;
       socket.end();
       resolve(true);
     });
-    
+
     socket.on('timeout', () => {
       console.log(`❌ Connection to ${hostname}:${port} timed out`);
       console.log('Suggestions:');
@@ -93,10 +93,10 @@ function portTest() {
       socket.destroy();
       resolve(false);
     });
-    
+
     socket.on('error', (error) => {
       console.log(`❌ Error connecting to ${hostname}:${port}: ${error.message}`);
-      
+
       if (error.code === 'ENOTFOUND') {
         console.log('Suggestions:');
         console.log(' - Check if the hostname is correct');
@@ -111,17 +111,17 @@ function portTest() {
         console.log(' - The server actively refused the connection');
         console.log(' - This might be due to security settings or SSL/TLS requirements');
       }
-      
+
       resolve(false);
     });
-    
+
     socket.on('close', () => {
       if (!connected) {
         console.log('Connection closed without establishing connection');
         resolve(false);
       }
     });
-    
+
     // Attempt to connect
     console.log(`Attempting to connect to ${hostname}:${port}...`);
     socket.connect(port, hostname);
@@ -136,9 +136,9 @@ function httpsHandshakeTest() {
       resolve(true);
       return;
     }
-    
+
     console.log(`\nTest 3: HTTPS Handshake with ${hostname}:${port}`);
-    
+
     // Create HTTPS request options
     const options = {
       hostname: hostname,
@@ -149,18 +149,18 @@ function httpsHandshakeTest() {
       // This would normally be unsafe, but for testing we can try both ways
       rejectUnauthorized: false
     };
-    
+
     const req = https.request(options, (res) => {
       console.log('✅ HTTPS handshake successful');
       console.log(`Status code: ${res.statusCode}`);
       console.log('Response headers:', res.headers);
-      
+
       // Consume response data to free up memory
       res.on('data', () => {});
-      
+
       resolve(true);
     });
-    
+
     req.on('timeout', () => {
       console.log('❌ HTTPS request timed out');
       console.log('Suggestions:');
@@ -169,24 +169,24 @@ function httpsHandshakeTest() {
       req.destroy();
       resolve(false);
     });
-    
+
     req.on('error', (error) => {
       console.log(`❌ HTTPS error: ${error.message}`);
-      
+
       if (error.message.includes('certificate')) {
         console.log('Certificate issue detected:');
         console.log(' - FortiGate likely uses a self-signed certificate');
         console.log(' - Add ALLOW_SELF_SIGNED=true to your .env file');
         console.log(' - For API requests, set NODE_TLS_REJECT_UNAUTHORIZED=0');
       }
-      
+
       console.log('Suggestions:');
       console.log(' - Verify HTTPS is properly configured on FortiGate');
       console.log(' - Check if your network allows HTTPS connections');
-      
+
       resolve(false);
     });
-    
+
     req.end();
   });
 }
@@ -196,12 +196,12 @@ async function runTests() {
   let pingResult = await pingTest();
   let portResult = await portTest();
   let httpsResult = await httpsHandshakeTest();
-  
+
   console.log('\n=== Summary ===');
   console.log('Ping test:', pingResult ? '✅ Passed' : '❌ Failed');
   console.log('Port test:', portResult ? '✅ Passed' : '❌ Failed');
   console.log('HTTPS test:', httpsResult ? '✅ Passed' : '❌ Failed/Skipped');
-  
+
   if (!portResult) {
     console.log('\nTroubleshooting Next Steps:');
     console.log('1. Verify the FortiGate URL in .env (should be https://ipaddress:port)');

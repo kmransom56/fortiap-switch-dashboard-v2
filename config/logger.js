@@ -57,31 +57,31 @@ const logger = winston.createLogger({
       filename: path.join(logsDir, 'error.log'),
       level: 'error',
       maxsize: 5242880, // 5MB
-      maxFiles: 5,
+      maxFiles: 5
     }),
     // Combined log file
     new winston.transports.File({
       filename: path.join(logsDir, 'combined.log'),
       maxsize: 5242880, // 5MB
-      maxFiles: 5,
+      maxFiles: 5
     }),
     // Console output (skip in test environment)
     ...(process.env.NODE_ENV !== 'test' ? [
       new winston.transports.Console({
-        format: consoleFormat,
+        format: consoleFormat
       })
     ] : [])
   ],
   // Handle uncaught exceptions
   exceptionHandlers: [
     new winston.transports.File({
-      filename: path.join(logsDir, 'exceptions.log'),
+      filename: path.join(logsDir, 'exceptions.log')
     })
   ],
   // Handle unhandled promise rejections
   rejectionHandlers: [
     new winston.transports.File({
-      filename: path.join(logsDir, 'rejections.log'),
+      filename: path.join(logsDir, 'rejections.log')
     })
   ]
 });

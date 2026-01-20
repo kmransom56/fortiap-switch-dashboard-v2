@@ -1,6 +1,7 @@
 {
   "env": {
     "node": true,
+    "browser": true,
     "es2021": true,
     "jest": true
   },
@@ -32,6 +33,16 @@
     "logs/",
     ".ralph/",
     "archive/",
-    "babylon_3d/"
+    "babylon_3d/",
+    "app.js",
+    "public/",
+    "shared/",
+    "ralph*.js",
+    "d3-topology.js",
+    "model-library.js",
+    "device-config.js",
+    "force-graph-view.js",
+    "**/*.json",
+    "**/*.html"
   ]
 }

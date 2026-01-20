@@ -15,7 +15,7 @@ beforeAll(() => {
   const indexHtml = fs.readFileSync(path.resolve(__dirname, '../index.html'), 'utf8');
   class NoopLoader extends ResourceLoader {
     fetch(url, options) {
-      return Promise.resolve(Buffer.from(''))
+      return Promise.resolve(Buffer.from(''));
     }
   }
   const dom = new JSDOM(indexHtml, { runScripts: 'dangerously', resources: new NoopLoader() });
@@ -37,7 +37,7 @@ describe('FortDashboard unit tests', () => {
     d.dataSource = 'Cache';
     d.lastCacheUpdate = '2025-01-01T12:00:00Z';
     d.data = {
-      fortiaps: [ { name: 'AP1', status: 'up', clients_connected: 3 } ],
+      fortiaps: [{ name: 'AP1', status: 'up', clients_connected: 3 }],
       fortiswitches: [
         {
           name: 'SW1',

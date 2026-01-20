@@ -46,14 +46,14 @@ async function testUrlToken() {
         console.log('FortiGate hostname:', response.data.results.hostname || 'Unknown');
         console.log('FortiGate serial:', response.data.results.serial || 'Unknown');
       }
-      
+
       console.log('\n📝 Server Configuration:');
       console.log('Your FortiGate requires tokens in URL parameters (not headers)');
       console.log('The server.js file needs to be updated to use:');
       console.log('  ${url}?access_token=${token}');
       console.log('instead of:');
       console.log('  Authorization: Bearer ${token}');
-      
+
     } else if (response.status === 401) {
       console.log('\n❌ Still getting 401 - token might be invalid');
       console.log('Try regenerating the token for api-admin');

@@ -7,7 +7,13 @@ const server = require('../server.js');
 
 afterAll(async () => {
   // ensure server instance closed to avoid port collisions during test runs
-  try { if (server && typeof server.close === 'function') await new Promise((res) => server.close(res)); } catch (e) {}
+  try {
+    if (server && typeof server.close === 'function') {
+      await new Promise((res) => server.close(res));
+    }
+  } catch (_e) {
+    // Ignore cleanup errors
+  }
 });
 
 describe('Server internal helpers', () => {
@@ -45,7 +51,7 @@ describe('Server internal helpers', () => {
 
     // Write a valid cache file for fortiaps
     const filePath = path.join(cacheDir, 'fortiaps.json');
-    const payload = { _timestamp: Date.now(), data: [ { name: 'APX' } ] };
+    const payload = { _timestamp: Date.now(), data: [{ name: 'APX' }] };
     fs.writeFileSync(filePath, JSON.stringify(payload), 'utf8');
 
     const v = loadCachedData('fortiaps');
@@ -63,7 +69,7 @@ describe('Server internal helpers', () => {
     expect(Array.isArray(fb)).toBe(true);
 
     // cleanup
-    try { fs.unlinkSync(filePath) } catch (e) {}
+    try { fs.unlinkSync(filePath); } catch (_e) { // Ignore cleanup errors }
   });
 
   test('saveDataToCache should write data to cache files', () => {
@@ -82,7 +88,7 @@ describe('Server internal helpers', () => {
     expect(cached.data).toEqual(testData);
 
     // cleanup
-    try { fs.unlinkSync(filePath) } catch (e) {}
+    try { fs.unlinkSync(filePath); } catch (_e) { // Ignore cleanup errors }
   });
 
   test('transformFortiAPData should transform API data correctly', () => {
@@ -260,7 +266,7 @@ describe('Server internal helpers', () => {
     expect(result).toBeNull();
 
     // cleanup
-    try { fs.unlinkSync(filePath) } catch (e) {}
+    try { fs.unlinkSync(filePath); } catch (_e) { // Ignore cleanup errors }
   });
 
   test('loadCachedData should return null for non-existent cache type', () => {
@@ -284,7 +290,7 @@ describe('Server internal helpers', () => {
     if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir, { recursive: true });
 
     const filePath = path.join(cacheDir, 'fortiswitches.json');
-    const payload = { _timestamp: Date.now(), data: [ { name: 'SW1' } ] };
+    const payload = { _timestamp: Date.now(), data: [{ name: 'SW1' }] };
     fs.writeFileSync(filePath, JSON.stringify(payload), 'utf8');
 
     const result = loadCachedData('fortiswitches');
@@ -292,7 +298,7 @@ describe('Server internal helpers', () => {
     expect(result[0].name).toBe('SW1');
 
     // cleanup
-    try { fs.unlinkSync(filePath) } catch (e) {}
+    try { fs.unlinkSync(filePath); } catch (_e) { // Ignore cleanup errors }
   });
 
   test('loadCachedData should load historical_data cache', () => {
@@ -308,6 +314,6 @@ describe('Server internal helpers', () => {
     expect(result).toHaveProperty('history');
 
     // cleanup
-    try { fs.unlinkSync(filePath) } catch (e) {}
+    try { fs.unlinkSync(filePath); } catch (_e) { // Ignore cleanup errors }
   });
 });

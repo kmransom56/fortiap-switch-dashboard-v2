@@ -62,7 +62,7 @@ async function testTokenVariations() {
 
   for (const testCase of testCases) {
     console.log(`\n=== Testing: ${testCase.name} ===`);
-    
+
     try {
       const response = await axios({
         method: 'get',
