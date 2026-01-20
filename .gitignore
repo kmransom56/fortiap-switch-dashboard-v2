@@ -235,3 +235,6 @@ dmypy.json
 .ralph/
 !.ralph/README.md
 ralph-*.log
+
+# Web archive files
+*.mhtml

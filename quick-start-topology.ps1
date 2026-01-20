@@ -11,6 +11,7 @@ $projectDir = "C:\Users\Keith Ransom\CascadeProjects\fortiap-switch-dashboard"
 
 # Check if we're in the right directory
 if (-not (Test-Path $projectDir)) {
+    
     Write-Host "❌ Project directory not found: $projectDir" -ForegroundColor Red
     Write-Host "Please update the path in this script" -ForegroundColor Yellow
     exit 1
