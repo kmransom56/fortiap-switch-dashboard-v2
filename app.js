@@ -42,9 +42,130 @@ class FortDashboard {
 
     async init() {
         this.setupEventListeners();
+        this.setupWebSocket();
         await this.loadData();
         this.render();
         this.setupAutoRefresh();
+    }
+
+    setupWebSocket() {
+        try {
+            // Check if socket.io is available
+            if (typeof io === 'undefined') {
+                console.warn('Socket.IO client library not loaded. Real-time updates disabled.');
+                return;
+            }
+
+            // Connect to WebSocket server
+            const socket = io(window.location.origin, {
+                reconnection: true,
+                reconnectionDelay: 1000,
+                reconnectionDelayMax: 5000,
+                reconnectionAttempts: 5,
+                auth: {
+                    clientId: `dashboard-${Date.now()}`,
+                    token: null
+                }
+            });
+
+            // Store socket reference
+            this.socket = socket;
+
+            // Connection events
+            socket.on('connect', () => {
+                console.log('WebSocket connected:', socket.id);
+                document.body.classList.add('ws-connected');
+                document.body.classList.remove('ws-disconnected');
+            });
+
+            socket.on('disconnect', () => {
+                console.log('WebSocket disconnected');
+                document.body.classList.remove('ws-connected');
+                document.body.classList.add('ws-disconnected');
+            });
+
+            socket.on('connect_error', (error) => {
+                console.error('WebSocket connection error:', error);
+            });
+
+            // Listen for data updates
+            socket.on('device-status-update', (data) => {
+                console.log('Received device status update:', data);
+                this.handleDeviceStatusUpdate(data);
+            });
+
+            socket.on('connected-devices-update', (data) => {
+                console.log('Received connected devices update:', data);
+                this.handleConnectedDevicesUpdate(data);
+            });
+
+            socket.on('topology-update', (data) => {
+                console.log('Received topology update:', data);
+                this.handleTopologyUpdate(data);
+            });
+
+            socket.on('stats-update', (data) => {
+                console.log('Received stats update:', data);
+                this.handleStatsUpdate(data);
+            });
+
+            // Subscribe to real-time updates
+            socket.emit('subscribe', { channel: 'devices' });
+            socket.emit('subscribe', { channel: 'connected-devices' });
+            socket.emit('subscribe', { channel: 'topology' });
+
+        } catch (error) {
+            console.warn('Failed to setup WebSocket:', error);
+        }
+    }
+
+    handleDeviceStatusUpdate(data) {
+        if (!this.data) return;
+        
+        // Update AP status
+        if (data.type === 'ap' && data.serial) {
+            const ap = this.data.fortiaps?.find(a => a.serial === data.serial);
+            if (ap) {
+                Object.assign(ap, data.updates);
+            }
+        }
+        
+        // Update Switch status
+        if (data.type === 'switch' && data.serial) {
+            const sw = this.data.fortiswitches?.find(s => s.serial === data.serial);
+            if (sw) {
+                Object.assign(sw, data.updates);
+            }
+        }
+
+        // Re-render affected sections
+        if (data.type === 'ap') {
+            this.renderFortiAPs();
+        } else if (data.type === 'switch') {
+            this.renderFortiSwitches();
+        }
+    }
+
+    handleConnectedDevicesUpdate(data) {
+        if (!this.data) return;
+        this.data.connected_devices = data;
+        this.renderConnectedDevices();
+    }
+
+    handleTopologyUpdate(data) {
+        if (!this.data) return;
+        this.data.network_topology = data;
+        if (this.currentTab === 'topology') {
+            this.renderTopology();
+        }
+    }
+
+    handleStatsUpdate(data) {
+        if (!this.data) return;
+        this.data.stats = data;
+        if (this.currentTab === 'historical') {
+            this.renderHistorical();
+        }
     }
 
     setupEventListeners() {
@@ -56,17 +177,17 @@ class FortDashboard {
         });
 
         // Theme toggle
-        document.getElementById('themeToggle').addEventListener('click', () => {
+        document.getElementById('themeToggle')?.addEventListener('click', () => {
             this.toggleTheme();
         });
 
         // Refresh button
-        document.getElementById('refreshBtn').addEventListener('click', () => {
+        document.getElementById('refreshBtn')?.addEventListener('click', () => {
             this.refreshData();
         });
 
         // Export button
-        document.getElementById('exportBtn').addEventListener('click', () => {
+        document.getElementById('exportBtn')?.addEventListener('click', () => {
             this.exportData();
         });
 
@@ -402,6 +523,34 @@ class FortDashboard {
                 console.error('Error loading connected devices:', error);
             }
 
+            // Load statistics
+            try {
+                const statsResponse = await fetch('/api/stats');
+                if (statsResponse.ok) {
+                    const statsData = await statsResponse.json();
+                    this.data.stats = statsData;
+                    console.log('Successfully loaded statistics:', statsData);
+                } else {
+                    console.error('Failed to load stats, status:', statsResponse.status);
+                }
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+
+            // Load alerts
+            try {
+                const alertsResponse = await fetch('/api/alerts');
+                if (alertsResponse.ok) {
+                    const alertsData = await alertsResponse.json();
+                    this.data.alerts = alertsData;
+                    console.log(`Successfully loaded ${alertsData.length || 0} alerts`);
+                } else {
+                    console.error('Failed to load alerts, status:', alertsResponse.status);
+                }
+            } catch (error) {
+                console.error('Error loading alerts:', error);
+            }
+
             // Update last updated time
             this.data.last_updated = new Date().toISOString();
 
@@ -678,6 +827,20 @@ class FortDashboard {
         setInterval(() => {
             this.refreshData();
         }, 5 * 60 * 1000); // 5 minutes
+    }
+
+    toggleTheme() {
+        this.darkMode = !this.darkMode;
+        
+        if (this.darkMode) {
+            document.body.classList.add('dark-mode');
+            document.getElementById('themeToggle').innerHTML = '<i class="fas fa-sun"></i>';
+            localStorage.setItem('theme', 'dark');
+        } else {
+            document.body.classList.remove('dark-mode');
+            document.getElementById('themeToggle').innerHTML = '<i class="fas fa-moon"></i>';
+            localStorage.setItem('theme', 'light');
+        }
     }
 
     async refreshData() {
