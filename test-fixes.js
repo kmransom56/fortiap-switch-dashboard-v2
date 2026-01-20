@@ -5,6 +5,7 @@
  */
 
 const http = require('http');
+const fs = require('fs');
 
 const tests = [
   { method: 'GET', path: '/api/fortiaps', name: 'FortiAPs List' },
@@ -23,83 +24,90 @@ const PORT = process.env.DASHBOARD_PORT || 13000;
 const HOST = 'localhost';
 
 console.log('\n🧪 Dashboard Endpoint Tests');
-console.log('=' .repeat(50));
+console.log('='.repeat(50));
 console.log(`Testing endpoints on ${HOST}:${PORT}\n`);
 
 let passed = 0;
 let failed = 0;
 let skipped = 0;
 
-async function testEndpoint(test) {
-  return new Promise((resolve) => {
-    const options = {
-      hostname: HOST,
-      port: PORT,
-      path: test.path,
-      method: test.method,
-      timeout: 5000
-    };
+function testEndpoint(test, callback) {
+  const options = {
+    hostname: HOST,
+    port: PORT,
+    path: test.path,
+    method: test.method,
+    timeout: 5000
+  };
 
-    const req = http.request(options, (res) => {
-      const statusOk = res.statusCode >= 200 && res.statusCode < 400;
-      const icon = statusOk ? '✓' : '✗';
-      const status = `${res.statusCode} ${http.STATUS_CODES[res.statusCode]}`;
-      
-      console.log(`${icon} ${test.name.padEnd(25)} ${status}`);
-      
-      if (statusOk) {
-        passed++;
-      } else {
-        failed++;
-      }
-      
-      res.on('data', () => {}); // drain response
-      res.on('end', () => resolve());
-    });
-
-    req.on('timeout', () => {
-      console.log(`⏱ ${test.name.padEnd(25)} TIMEOUT`);
-      skipped++;
-      req.destroy();
-      resolve();
-    });
-
-    req.on('error', (err) => {
-      console.log(`✗ ${test.name.padEnd(25)} ERROR: ${err.code}`);
-      if (err.code === 'ECONNREFUSED') {
-        console.log(`  → Server not running on ${HOST}:${PORT}`);
-        process.exit(1);
-      }
+  const req = http.request(options, (res) => {
+    const statusOk = res.statusCode >= 200 && res.statusCode < 400;
+    const icon = statusOk ? '✓' : '✗';
+    const status = `${res.statusCode} ${http.STATUS_CODES[res.statusCode]}`;
+    
+    console.log(`${icon} ${test.name.padEnd(25)} ${status}`);
+    
+    if (statusOk) {
+      passed++;
+    } else {
       failed++;
-      resolve();
-    });
-
-    req.end();
+    }
+    
+    res.on('data', () => {}); // drain response
+    res.on('end', () => callback());
   });
+
+  req.on('timeout', () => {
+    console.log(`⏱ ${test.name.padEnd(25)} TIMEOUT`);
+    skipped++;
+    req.destroy();
+    callback();
+  });
+
+  req.on('error', (err) => {
+    console.log(`✗ ${test.name.padEnd(25)} ERROR: ${err.code}`);
+    if (err.code === 'ECONNREFUSED') {
+      console.log(`  → Server not running on ${HOST}:${PORT}`);
+      process.exit(1);
+    }
+    failed++;
+    callback();
+  });
+
+  req.end();
 }
 
-async function runTests() {
-  for (const test of tests) {
-    await testEndpoint(test);
-  }
+function runTests(callback) {
+  let i = 0;
+  
+  function nextTest() {
+    if (i >= tests.length) {
+      console.log('\n' + '='.repeat(50));
+      console.log(`Results: ${passed} passed, ${failed} failed, ${skipped} skipped\n`);
 
-  console.log('\n' + '='.repeat(50));
-  console.log(`Results: ${passed} passed, ${failed} failed, ${skipped} skipped\n`);
-
-  if (failed === 0) {
-    console.log('✓ All endpoints are working!\n');
-    return 0;
-  } else {
-    console.log('✗ Some endpoints failed. Check server logs.\n');
-    return 1;
+      if (failed === 0) {
+        console.log('✓ All endpoints are working!\n');
+        callback(0);
+      } else {
+        console.log('✗ Some endpoints failed. Check server logs.\n');
+        callback(1);
+      }
+      return;
+    }
+    
+    testEndpoint(tests[i], () => {
+      i++;
+      nextTest();
+    });
   }
+  
+  nextTest();
 }
 
 // Check app.js for required methods
 console.log('\n🔍 Code Quality Checks');
 console.log('='.repeat(50));
 
-const fs = require('fs');
 const appJsContent = fs.readFileSync('./app.js', 'utf8');
 
 const requiredMethods = [
@@ -165,4 +173,6 @@ if (methodsFailed > 0) {
 }
 
 console.log('\n🚀 Running endpoint tests...\n');
-await runTests();
+runTests((exitCode) => {
+  process.exit(exitCode);
+});
