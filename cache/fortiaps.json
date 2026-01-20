@@ -1,0 +1,43 @@
+{
+  "_timestamp": 1768910662242,
+  "data": [
+    {
+      "name": "AP",
+      "serial": "FP231FTF20023043",
+      "model": "FP231F",
+      "ip_address": "192.168.1.4",
+      "firmware_version": "FP231F-v7.6.3-build1032",
+      "clients_connected": 0,
+      "status": "down",
+      "temperature": 51,
+      "last_seen": "12/31/25 22:38",
+      "interfering_aps": 0,
+      "connection_state": "Disconnected",
+      "board_mac": "d4:76:a0:14:d4:28",
+      "ssid": [
+        "NET_INT_SSID"
+      ],
+      "channel_utilization_2_4": 0,
+      "channel_utilization_5": 0
+    },
+    {
+      "name": "AP2",
+      "serial": "FP231FTF22003593",
+      "model": "FP231F",
+      "ip_address": "192.168.1.2",
+      "firmware_version": "FP231F-v7.6.3-build1032",
+      "clients_connected": 5,
+      "status": "up",
+      "temperature": 38,
+      "last_seen": "12/29/25 05:53",
+      "interfering_aps": 65,
+      "connection_state": "Connected",
+      "board_mac": "94:ff:3c:b4:11:40",
+      "ssid": [
+        "NET_INT_SSID"
+      ],
+      "channel_utilization_2_4": 0,
+      "channel_utilization_5": 0
+    }
+  ]
+}

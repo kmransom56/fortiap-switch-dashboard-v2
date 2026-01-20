@@ -655,6 +655,68 @@ app.get('/api/fortiswitches', apiLimiter, asyncHandler(async (req, res) => {
 }));
 
 /**
+ * API route: GET specific FortiAP by serial
+ */
+app.get('/api/fortiaps/:serial', apiLimiter, asyncHandler(async (req, res) => {
+  const serial = req.params.serial;
+  
+  try {
+    const apiData = await makeFortiRequest('/monitor/wifi/managed_ap');
+    
+    if (apiData && apiData.results) {
+      const device = apiData.results.find(ap => ap.serial === serial);
+      if (device) {
+        const transformed = transformFortiAPData([device]);
+        return res.json(transformed.fortiaps[0]);
+      }
+    }
+  } catch (error) {
+    logger.warn(`FortiAP ${serial} API call failed, checking fallback`, { error: error.message });
+  }
+  
+  // Try fallback data
+  const fallbackData = loadFallbackData('fortiaps');
+  const device = fallbackData.find(ap => ap.serial === serial);
+  
+  if (device) {
+    return res.json(device);
+  }
+  
+  res.status(404).json({ error: 'FortiAP not found', serial });
+}));
+
+/**
+ * API route: GET specific FortiSwitch by serial
+ */
+app.get('/api/fortiswitches/:serial', apiLimiter, asyncHandler(async (req, res) => {
+  const serial = req.params.serial;
+  
+  try {
+    const apiData = await makeFortiRequest('/monitor/switch-controller/managed-switch/port-stats');
+    
+    if (apiData && apiData.results) {
+      const device = apiData.results.find(sw => sw.serial === serial);
+      if (device) {
+        const transformed = transformFortiSwitchData([device]);
+        return res.json(transformed.fortiswitches[0]);
+      }
+    }
+  } catch (error) {
+    logger.warn(`FortiSwitch ${serial} API call failed, checking fallback`, { error: error.message });
+  }
+  
+  // Try fallback data
+  const fallbackData = loadFallbackData('fortiswitches');
+  const device = fallbackData.find(sw => sw.serial === serial);
+  
+  if (device) {
+    return res.json(device);
+  }
+  
+  res.status(404).json({ error: 'FortiSwitch not found', serial });
+}));
+
+/**
  * Transform connected device data from various sources
  */
 function transformConnectedDeviceData(device, type = 'detected') {
@@ -1105,6 +1167,98 @@ app.get('/api/topology', async (req, res) => {
     });
   }
 });
+
+/**
+ * API route: GET dashboard statistics
+ */
+app.get('/api/stats', apiLimiter, asyncHandler(async (req, res) => {
+  try {
+    const [apData, switchData] = await Promise.all([
+      makeFortiRequest('/monitor/wifi/managed_ap').catch(() => null),
+      makeFortiRequest('/monitor/switch-controller/managed-switch/port-stats').catch(() => null)
+    ]);
+
+    const aps = apData?.results || loadFallbackData('fortiaps');
+    const switches = switchData?.results || loadFallbackData('fortiswitches');
+
+    const stats = {
+      fortiaps: {
+        total: aps.length,
+        online: aps.filter(ap => ap.status === 'up' || ap.status === 'online').length,
+        offline: aps.filter(ap => ap.status === 'down' || ap.status === 'offline').length,
+        total_clients: aps.reduce((sum, ap) => sum + (ap.clients_connected || 0), 0)
+      },
+      fortiswitches: {
+        total: switches.length,
+        online: switches.filter(sw => sw.status === 'up' || sw.status === 'online').length,
+        offline: switches.filter(sw => sw.status === 'down' || sw.status === 'offline').length,
+        total_ports: switches.reduce((sum, sw) => sum + (sw.total_ports || 0), 0),
+        ports_up: switches.reduce((sum, sw) => sum + (sw.ports_up || 0), 0)
+      },
+      timestamp: new Date().toISOString()
+    };
+
+    res.json(stats);
+  } catch (error) {
+    logger.error('Failed to get stats', { error: error.message });
+    res.status(500).json({ error: 'Failed to retrieve statistics' });
+  }
+}));
+
+/**
+ * API route: GET system alerts
+ */
+app.get('/api/alerts', apiLimiter, asyncHandler(async (req, res) => {
+  try {
+    const [apData, switchData] = await Promise.all([
+      makeFortiRequest('/monitor/wifi/managed_ap').catch(() => null),
+      makeFortiRequest('/monitor/switch-controller/managed-switch/port-stats').catch(() => null)
+    ]);
+
+    const aps = apData?.results || loadFallbackData('fortiaps');
+    const switches = switchData?.results || loadFallbackData('fortiswitches');
+
+    const alerts = [];
+
+    // Check for offline devices
+    aps.forEach(ap => {
+      if (ap.status === 'down' || ap.status === 'offline') {
+        alerts.push({
+          type: 'critical',
+          category: 'fortiap',
+          device: ap.name || ap.serial,
+          message: `FortiAP ${ap.name} is offline`,
+          timestamp: new Date().toISOString()
+        });
+      }
+    });
+
+    switches.forEach(sw => {
+      if (sw.status === 'down' || sw.status === 'offline') {
+        alerts.push({
+          type: 'critical',
+          category: 'fortiswitch',
+          device: sw.name || sw.serial,
+          message: `FortiSwitch ${sw.name} is offline`,
+          timestamp: new Date().toISOString()
+        });
+      } else if (sw.status === 'warning') {
+        alerts.push({
+          type: 'warning',
+          category: 'fortiswitch',
+          device: sw.name || sw.serial,
+          message: `FortiSwitch ${sw.name} has warnings`,
+          timestamp: new Date().toISOString()
+        });
+      }
+    });
+
+    res.json(alerts);
+  } catch (error) {
+    logger.error('Failed to get alerts', { error: error.message });
+    res.json([]);
+  }
+}));
 
 /**
  * API route: GET FortiGate connection status
