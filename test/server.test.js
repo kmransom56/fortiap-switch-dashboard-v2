@@ -68,13 +68,15 @@ describe('Server API', () => {
     });
 
     // Now import the app
-    app = require('../server');
+    const server = require('../server');
+    app = server.app;  // Use the exported app for testing
   });
 
   afterEach(async () => {
-    // Clean up between tests
-    if (app && typeof app.close === 'function') {
-      await new Promise((resolve) => { try { app.close(resolve); } catch (e) { resolve(); } });
+    // Clean up between tests - in test mode, server.close is a no-op
+    const server = require('../server');
+    if (server && typeof server.close === 'function') {
+      await new Promise((resolve) => { try { server.close(resolve); } catch (e) { resolve(); } });
     }
 
     jest.clearAllMocks();
@@ -214,12 +216,10 @@ describe('Server API', () => {
         return JSON.stringify({ _timestamp: Date.now(), data: [] });
       });
 
-      // Close the current server instance, then re-require so the latest fs mocks are used
-      if (app && typeof app.close === 'function') {
-        await new Promise((resolve) => { try { app.close(resolve); } catch (e) { resolve(); } });
-      }
+      // Re-require so the latest fs mocks are used
       jest.resetModules();
-      app = require('../server');
+      const serverModule = require('../server');
+      app = serverModule.app;  // Use the exported app for testing
 
       const response = await request(app).get('/api/fortiaps');
 

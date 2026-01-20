@@ -3,7 +3,9 @@
  * Tests for MemoryCache class and caching mechanisms
  */
 
-const { MemoryCache } = require('../server');
+jest.resetModules();
+const server = require('../server');
+const { MemoryCache } = server;
 
 describe('MemoryCache', () => {
   let cache;
@@ -14,6 +16,17 @@ describe('MemoryCache', () => {
 
   afterEach(() => {
     cache.stopCleanup();
+  });
+
+  afterAll(async () => {
+    // Close server to avoid port conflicts
+    try {
+      if (server && typeof server.close === 'function') {
+        await new Promise((resolve) => server.close(resolve));
+      }
+    } catch (_e) {
+      // Ignore cleanup errors
+    }
   });
 
   describe('Basic Operations', () => {

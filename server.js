@@ -1294,32 +1294,44 @@ app.use(errorHandler);
 
 /**
  * Start server
+ * Only start server if not in test mode
  */
-const server = app.listen(port, '0.0.0.0', () => {
-  logger.info('═══════════════════════════════════════════════════════════');
-  logger.info(`FortiGate Dashboard Server Started`);
-  logger.info('═══════════════════════════════════════════════════════════');
-  logger.info(`Server running on: http://0.0.0.0:${port}`);
-  logger.info(`Access at: http://localhost:${port}`);
-  logger.info(`Health check: http://localhost:${port}/health`);
-  logger.info(`API documentation: http://localhost:${port}/api-docs`);
-  logger.info(`FortiGate host: ${fortiConfig.host}`);
-  logger.info('═══════════════════════════════════════════════════════════');
-  logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
-  logger.info(`Node version: ${process.version}`);
-  logger.info('═══════════════════════════════════════════════════════════\n');
-});
+let server;
 
-/**
- * Initialize WebSocket server
- */
-const io = initializeWebSocket(server);
+if (process.env.NODE_ENV !== 'test') {
+  server = app.listen(port, '0.0.0.0', () => {
+    logger.info('═══════════════════════════════════════════════════════════');
+    logger.info(`FortiGate Dashboard Server Started`);
+    logger.info('═══════════════════════════════════════════════════════════');
+    logger.info(`Server running on: http://0.0.0.0:${port}`);
+    logger.info(`Access at: http://localhost:${port}`);
+    logger.info(`Health check: http://localhost:${port}/health`);
+    logger.info(`API documentation: http://localhost:${port}/api-docs`);
+    logger.info(`FortiGate host: ${fortiConfig.host}`);
+    logger.info('═══════════════════════════════════════════════════════════');
+    logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    logger.info(`Node version: ${process.version}`);
+    logger.info('═══════════════════════════════════════════════════════════\n');
+  });
 
-// Make io instance available to routes for broadcasting updates
-app.set('io', io);
+  /**
+   * Initialize WebSocket server
+   */
+  const io = initializeWebSocket(server);
 
-logger.info('WebSocket server ready for real-time updates');
-logger.info(`WebSocket endpoint: ws://localhost:${port}`);
+  // Make io instance available to routes for broadcasting updates
+  app.set('io', io);
+
+  logger.info('WebSocket server ready for real-time updates');
+  logger.info(`WebSocket endpoint: ws://localhost:${port}`);
+} else {
+  // In test mode, create a mock server object for compatibility
+  server = {
+    close: (callback) => {
+      if (callback) callback();
+    }
+  };
+}
 
 /**
  * Graceful shutdown handler
@@ -1375,6 +1387,7 @@ module.exports = server;
 
 // Expose internal helpers for unit tests
 try {
+  module.exports.app = app; // Export app for testing with supertest
   module.exports.MemoryCache = MemoryCache;
   module.exports.loadCachedData = loadCachedData;
   module.exports.loadFallbackData = loadFallbackData;

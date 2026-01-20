@@ -69,7 +69,7 @@ describe('Server internal helpers', () => {
     expect(Array.isArray(fb)).toBe(true);
 
     // cleanup
-    try { fs.unlinkSync(filePath); } catch (_e) { // Ignore cleanup errors }
+    try { fs.unlinkSync(filePath); } catch (_e) { }
   });
 
   test('saveDataToCache should write data to cache files', () => {
@@ -88,7 +88,7 @@ describe('Server internal helpers', () => {
     expect(cached.data).toEqual(testData);
 
     // cleanup
-    try { fs.unlinkSync(filePath); } catch (_e) { // Ignore cleanup errors }
+    try { fs.unlinkSync(filePath); } catch (_e) { }
   });
 
   test('transformFortiAPData should transform API data correctly', () => {
@@ -266,7 +266,7 @@ describe('Server internal helpers', () => {
     expect(result).toBeNull();
 
     // cleanup
-    try { fs.unlinkSync(filePath); } catch (_e) { // Ignore cleanup errors }
+    try { fs.unlinkSync(filePath); } catch (_e) { }
   });
 
   test('loadCachedData should return null for non-existent cache type', () => {
@@ -298,7 +298,7 @@ describe('Server internal helpers', () => {
     expect(result[0].name).toBe('SW1');
 
     // cleanup
-    try { fs.unlinkSync(filePath); } catch (_e) { // Ignore cleanup errors }
+    try { fs.unlinkSync(filePath); } catch (_e) { }
   });
 
   test('loadCachedData should load historical_data cache', () => {
@@ -314,6 +314,6 @@ describe('Server internal helpers', () => {
     expect(result).toHaveProperty('history');
 
     // cleanup
-    try { fs.unlinkSync(filePath); } catch (_e) { // Ignore cleanup errors }
+    try { fs.unlinkSync(filePath); } catch (_e) { }
   });
 });

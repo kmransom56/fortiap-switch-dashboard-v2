@@ -55,8 +55,9 @@ class RateLimitError extends AppError {
 }
 
 class ExternalServiceError extends AppError {
-  constructor(message = 'External service error', statusCode = 502) {
-    super(message, statusCode);
+  constructor(message = 'External service error', service = 'Unknown Service') {
+    super(message, 502);
+    this.service = service;
   }
 }
 
@@ -117,17 +118,19 @@ const errorHandler = (err, req, res, next) => {
   // Prepare error response
   const errorResponse = {
     status: err.status,
-    message: err.message
+    message: err.message,
+    error: err.constructor.name
   };
 
   // Include stack trace in development mode
   if (process.env.NODE_ENV === 'development') {
     errorResponse.stack = err.stack;
-    errorResponse.error = err;
   }
 
   // Handle specific error types
-  if (err.name === 'ValidationError') {
+  // Only override message for third-party ValidationErrors (like Mongoose)
+  // Our custom ValidationError already has a good message
+  if (err.name === 'ValidationError' && !err.isOperational) {
     errorResponse.message = 'Validation failed';
     errorResponse.details = err.details || err.message;
   }

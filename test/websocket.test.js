@@ -64,10 +64,19 @@ describe('WebSocket Configuration', () => {
     });
 
     test('should receive connected event', (done) => {
-      clientSocket.on('connected', (data) => {
+      // Create a new connection to test the connected event
+      const testClient = Client(`http://localhost:${port}`, {
+        auth: {
+          token: 'test-token-2',
+          clientId: 'test-client-connected'
+        }
+      });
+
+      testClient.on('connected', (data) => {
         expect(data).toHaveProperty('socketId');
         expect(data).toHaveProperty('serverTime');
         expect(data).toHaveProperty('message');
+        testClient.close();
         done();
       });
     });
