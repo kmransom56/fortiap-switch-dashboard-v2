@@ -20,9 +20,67 @@ const yaml = require('js-yaml');
 const path = require('path');
 const axios = require('axios');
 const compression = require('compression');
+const helmet = require('helmet');
+const cors = require('cors');
+
+// Import custom middleware
+const logger = require('./config/logger');
+const { apiLimiter, strictLimiter, healthCheckLimiter } = require('./middleware/rateLimiter');
+const { sanitizeInput } = require('./middleware/validation');
+const { asyncHandler, notFoundHandler, errorHandler, ExternalServiceError } = require('./middleware/errorHandler');
 
 const app = express();
 const port = process.env.DASHBOARD_PORT || 13000;
+
+/**
+ * Security middleware
+ * Helmet sets various HTTP headers for security
+ */
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // Needed for D3.js and Babylon.js
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'"],
+      frameSrc: ["'none'"],
+      objectSrc: ["'none'"]
+    }
+  },
+  crossOriginEmbedderPolicy: false, // Needed for some 3D libraries
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
+
+/**
+ * CORS configuration
+ * Allow requests from specified origins
+ */
+const corsOptions = {
+  origin: process.env.ALLOWED_ORIGINS?.split(',') || '*',
+  optionsSuccessStatus: 200,
+  credentials: true
+};
+app.use(cors(corsOptions));
+
+/**
+ * Request logging middleware
+ * Logs all incoming requests
+ */
+app.use(logger.requestLogger);
+
+/**
+ * Body parsing middleware
+ */
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+/**
+ * Input sanitization middleware
+ * Removes potentially dangerous input
+ */
+app.use(sanitizeInput);
 
 /**
  * Compression middleware configuration
@@ -523,46 +581,48 @@ function transformFortiSwitchData(switches) {
 /**
  * API route: GET FortiAPs
  */
-app.get('/api/fortiaps', async (req, res) => {
+app.get('/api/fortiaps', apiLimiter, asyncHandler(async (req, res) => {
   try {
     const apiData = await makeFortiRequest('/monitor/wifi/managed_ap');
-    
+
     if (apiData && apiData.results && apiData.results.length > 0) {
-      console.log(`Retrieved ${apiData.results.length} FortiAP devices from API`);
+      logger.info(`Retrieved ${apiData.results.length} FortiAP devices from API`);
+      logger.logApiCall('/monitor/wifi/managed_ap', 'GET', 'success', { count: apiData.results.length });
       const transformedData = transformFortiAPData(apiData.results);
       saveDataToCache('fortiaps', transformedData);
       return res.json(transformedData);
     }
 
-    throw new Error('No FortiAP data in API response');
+    throw new ExternalServiceError('No FortiAP data in API response');
   } catch (error) {
-    console.log('FortiAP API call failed:', error.message);
+    logger.warn('FortiAP API call failed, using fallback data', { error: error.message });
     const fallbackData = loadFallbackData('fortiaps');
     return res.json(fallbackData);
   }
-});
+}));
 
 /**
  * API route: GET FortiSwitches
  */
-app.get('/api/fortiswitches', async (req, res) => {
+app.get('/api/fortiswitches', apiLimiter, asyncHandler(async (req, res) => {
   try {
     const apiData = await makeFortiRequest('/monitor/switch-controller/managed-switch/port-stats');
-    
+
     if (apiData && apiData.results && apiData.results.length > 0) {
-      console.log(`Retrieved ${apiData.results.length} FortiSwitch devices from API`);
+      logger.info(`Retrieved ${apiData.results.length} FortiSwitch devices from API`);
+      logger.logApiCall('/monitor/switch-controller/managed-switch/port-stats', 'GET', 'success', { count: apiData.results.length });
       const transformedData = transformFortiSwitchData(apiData.results);
       saveDataToCache('fortiswitches', transformedData);
       return res.json(transformedData);
     }
 
-    throw new Error('No FortiSwitch data in API response');
+    throw new ExternalServiceError('No FortiSwitch data in API response');
   } catch (error) {
-    console.log('FortiSwitch API call failed:', error.message);
+    logger.warn('FortiSwitch API call failed, using fallback data', { error: error.message });
     const fallbackData = loadFallbackData('fortiswitches');
     return res.json(fallbackData);
   }
-});
+}));
 
 /**
  * Transform connected device data from various sources
@@ -643,8 +703,8 @@ app.get('/api/connected-devices', async (req, res) => {
     // Process client devices
     clientDevices.forEach(device => {
       const mac = (device.mac || '').toLowerCase();
-      const interface = device.detected_interface || '';
-      const isWireless = interface.includes('wifi') || interface.includes('wlan') || 
+      const deviceInterface = device.detected_interface || '';
+      const isWireless = deviceInterface.includes('wifi') || deviceInterface.includes('wlan') || 
                         device.hardware_family === 'FortiAP' ||
                         (device.master_mac && apData.some(ap => 
                           (ap.board_mac || '').toLowerCase() === (device.master_mac || '').toLowerCase()
@@ -905,8 +965,8 @@ app.get('/api/topology', async (req, res) => {
 
     clientDevices.forEach(device => {
       const mac = (device.mac || '').toLowerCase();
-      const interface = device.detected_interface || '';
-      const isWireless = interface.includes('wifi') || interface.includes('wlan') || 
+      const deviceInterface = device.detected_interface || '';
+      const isWireless = deviceInterface.includes('wifi') || deviceInterface.includes('wlan') || 
                         device.hardware_family === 'FortiAP' ||
                         (device.master_mac && apData.some(ap => 
                           (ap.board_mac || '').toLowerCase() === (device.master_mac || '').toLowerCase()
@@ -1089,10 +1149,10 @@ app.use((req, res, next) => {
 /**
  * Health check endpoint
  */
-app.get('/health', (req, res) => {
+app.get('/health', healthCheckLimiter, (req, res) => {
   const uptime = Date.now() - performanceMetrics.startTime;
   const totalRequests = performanceMetrics.cacheHits + performanceMetrics.cacheMisses;
-  const cacheHitRate = totalRequests > 0 
+  const cacheHitRate = totalRequests > 0
     ? (performanceMetrics.cacheHits / totalRequests * 100).toFixed(2)
     : 0;
 
@@ -1118,7 +1178,7 @@ app.get('/health', (req, res) => {
 /**
  * Metrics endpoint
  */
-app.get('/metrics', (req, res) => {
+app.get('/metrics', apiLimiter, (req, res) => {
   res.json(performanceMetrics);
 });
 
@@ -1135,33 +1195,37 @@ app.get('/', (req, res) => {
 app.use(express.static(__dirname));
 
 /**
- * Error handling middleware
+ * 404 Not Found handler
+ * Must be added after all routes
  */
-app.use((err, req, res, next) => {
-  console.error('Unhandled error:', err);
-  
-  res.status(500).json({
-    error: 'Internal Server Error',
-    message: process.env.NODE_ENV === 'production' ? 'An error occurred' : err.message,
-    timestamp: new Date().toISOString()
-  });
-});
+app.use(notFoundHandler);
+
+/**
+ * Error logging middleware
+ */
+app.use(logger.errorLogger);
+
+/**
+ * Global error handling middleware
+ * Must be the last middleware
+ */
+app.use(errorHandler);
 
 /**
  * Start server
  */
 const server = app.listen(port, '0.0.0.0', () => {
-  console.log('═══════════════════════════════════════════════════════════');
-  console.log(`FortiGate Dashboard Server Started`);
-  console.log('═══════════════════════════════════════════════════════════');
-  console.log(`Server running on: http://0.0.0.0:${port}`);
-  console.log(`Access at: http://localhost:${port}`);
-  console.log(`Health check: http://localhost:${port}/health`);
-  console.log(`FortiGate host: ${fortiConfig.host}`);
-  console.log('═══════════════════════════════════════════════════════════');
-  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`Node version: ${process.version}`);
-  console.log('═══════════════════════════════════════════════════════════\n');
+  logger.info('═══════════════════════════════════════════════════════════');
+  logger.info(`FortiGate Dashboard Server Started`);
+  logger.info('═══════════════════════════════════════════════════════════');
+  logger.info(`Server running on: http://0.0.0.0:${port}`);
+  logger.info(`Access at: http://localhost:${port}`);
+  logger.info(`Health check: http://localhost:${port}/health`);
+  logger.info(`FortiGate host: ${fortiConfig.host}`);
+  logger.info('═══════════════════════════════════════════════════════════');
+  logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  logger.info(`Node version: ${process.version}`);
+  logger.info('═══════════════════════════════════════════════════════════\n');
 });
 
 /**
