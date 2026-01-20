@@ -33,6 +33,9 @@ const { asyncHandler, notFoundHandler, errorHandler, ExternalServiceError } = re
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
 
+// Import WebSocket configuration
+const { initializeWebSocket, broadcastToChannel, broadcastToAll, getConnectionStats } = require('./config/websocket');
+
 const app = express();
 const port = process.env.DASHBOARD_PORT || 13000;
 
@@ -595,6 +598,17 @@ app.get('/api/fortiaps', apiLimiter, asyncHandler(async (req, res) => {
       logger.logApiCall('/monitor/wifi/managed_ap', 'GET', 'success', { count: apiData.results.length });
       const transformedData = transformFortiAPData(apiData.results);
       saveDataToCache('fortiaps', transformedData);
+
+      // Broadcast real-time update to WebSocket clients
+      const io = req.app.get('io');
+      if (io) {
+        broadcastToChannel(io, 'fortiaps', 'fortiaps:update', {
+          timestamp: new Date().toISOString(),
+          count: transformedData.fortiaps.length,
+          data: transformedData
+        });
+      }
+
       return res.json(transformedData);
     }
 
@@ -618,6 +632,17 @@ app.get('/api/fortiswitches', apiLimiter, asyncHandler(async (req, res) => {
       logger.logApiCall('/monitor/switch-controller/managed-switch/port-stats', 'GET', 'success', { count: apiData.results.length });
       const transformedData = transformFortiSwitchData(apiData.results);
       saveDataToCache('fortiswitches', transformedData);
+
+      // Broadcast real-time update to WebSocket clients
+      const io = req.app.get('io');
+      if (io) {
+        broadcastToChannel(io, 'fortiswitches', 'fortiswitches:update', {
+          timestamp: new Date().toISOString(),
+          count: transformedData.fortiswitches.length,
+          data: transformedData
+        });
+      }
+
       return res.json(transformedData);
     }
 
@@ -784,8 +809,18 @@ app.get('/api/connected-devices', async (req, res) => {
       timestamp: new Date().toISOString()
     };
 
-    console.log(`Retrieved ${allDevices.total} connected devices (${wiredDevices.length} wired, ${wirelessDevices.length} wireless, ${detectedOnly.length} detected)`);
-    
+    logger.info(`Retrieved ${allDevices.total} connected devices (${wiredDevices.length} wired, ${wirelessDevices.length} wireless, ${detectedOnly.length} detected)`);
+
+    // Broadcast real-time update to WebSocket clients
+    const io = req.app.get('io');
+    if (io) {
+      broadcastToChannel(io, 'devices', 'devices:update', {
+        timestamp: allDevices.timestamp,
+        summary: allDevices.summary,
+        data: allDevices
+      });
+    }
+
     return res.json(allDevices);
   } catch (error) {
     console.error('Error retrieving connected devices:', error.message);
@@ -1032,7 +1067,17 @@ app.get('/api/topology', async (req, res) => {
 
     // Cache the topology
     topologyCache.set('topology', topologyData);
-    
+
+    // Broadcast real-time update to WebSocket clients
+    const io = req.app.get('io');
+    if (io) {
+      broadcastToChannel(io, 'topology', 'topology:update', {
+        timestamp: topologyData.timestamp,
+        totals: topologyData.totals,
+        data: topologyData
+      });
+    }
+
     return res.json(topologyData);
   } catch (error) {
     console.error('Error building topology:', error.message);
@@ -1188,6 +1233,17 @@ app.get('/metrics', apiLimiter, (req, res) => {
 });
 
 /**
+ * WebSocket connection statistics endpoint
+ */
+app.get('/api/websocket/stats', apiLimiter, (req, res) => {
+  const stats = getConnectionStats();
+  res.json({
+    ...stats,
+    timestamp: new Date().toISOString()
+  });
+});
+
+/**
  * API Documentation with Swagger UI
  */
 app.use('/api-docs', swaggerUi.serve);
@@ -1246,12 +1302,24 @@ const server = app.listen(port, '0.0.0.0', () => {
   logger.info(`Server running on: http://0.0.0.0:${port}`);
   logger.info(`Access at: http://localhost:${port}`);
   logger.info(`Health check: http://localhost:${port}/health`);
+  logger.info(`API documentation: http://localhost:${port}/api-docs`);
   logger.info(`FortiGate host: ${fortiConfig.host}`);
   logger.info('═══════════════════════════════════════════════════════════');
   logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
   logger.info(`Node version: ${process.version}`);
   logger.info('═══════════════════════════════════════════════════════════\n');
 });
+
+/**
+ * Initialize WebSocket server
+ */
+const io = initializeWebSocket(server);
+
+// Make io instance available to routes for broadcasting updates
+app.set('io', io);
+
+logger.info('WebSocket server ready for real-time updates');
+logger.info(`WebSocket endpoint: ws://localhost:${port}`);
 
 /**
  * Graceful shutdown handler
